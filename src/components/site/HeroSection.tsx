@@ -1,24 +1,13 @@
 import type { ContactInfo, Hero } from "@/lib/types";
 import { ArrowRight, Download } from "lucide-react";
-import { GoldDot } from "./shared";
+import { ParallaxPortrait } from "./HeroPortrait";
 
-function DotGrid() {
-  return (
-    <svg
-      aria-hidden
-      className="absolute -top-4 -right-2 h-24 w-24 text-accent/40"
-      viewBox="0 0 96 96"
-      fill="currentColor"
-    >
-      {Array.from({ length: 6 }).map((_, r) =>
-        Array.from({ length: 6 }).map((_, c) => (
-          <circle key={`${r}-${c}`} cx={8 + c * 16} cy={8 + r * 16} r={2} />
-        )),
-      )}
-    </svg>
-  );
-}
-
+/**
+ * The opening title. The text choreography is pure CSS (SSR-first: it plays
+ * before hydration and without JS): pills cascade → name rises word by word →
+ * the gold period lands → bio and CTAs follow. The portrait's depth response
+ * is a client enhancement.
+ */
 export function HeroSection({
   hero,
   contact,
@@ -28,29 +17,34 @@ export function HeroSection({
   contact: ContactInfo;
   workAnchor?: string;
 }) {
-  const initials = hero.name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w.charAt(0))
-    .join("");
-
-  // "APM, Ex-Founder, CS Engineer" reads as separate credentials — render it as
-  // wrapping pills so nothing ever truncates, at any width.
   const roles = hero.tagline
     .split(/\s*[,•·|]\s*/)
     .map((r) => r.trim())
     .filter(Boolean);
 
+  const words = hero.name.replace(/\.+$/, "").split(/\s+/).filter(Boolean);
+  const wordBase = 0.25;
+  const wordStep = 0.09;
+  const dotDelay = wordBase + words.length * wordStep + 0.12;
+
   return (
-    <section id="top" className="px-5 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 py-16 md:grid-cols-[1.2fr_1fr] md:py-28">
+    <section id="top" className="relative overflow-hidden px-5 sm:px-6 lg:px-8">
+      {/* Ambient warmth behind the portrait side — the footer bookends this. */}
+      <div
+        aria-hidden
+        className="ambient absolute -top-32 -right-40 h-[540px] w-[540px] rounded-full opacity-50"
+        style={{
+          background: "radial-gradient(circle, rgba(243,234,217,0.9) 0%, rgba(243,234,217,0) 65%)",
+        }}
+      />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 py-16 md:grid-cols-[1.2fr_1fr] md:py-28">
         <div className="min-w-0">
-          <div className="rise-in flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {roles.map((role, i) => (
               <span
                 key={i}
-                className="inline-flex max-w-full rounded-full bg-accent-soft px-3.5 py-1.5"
+                className="rise-in inline-flex max-w-full rounded-full bg-accent-soft px-3.5 py-1.5"
+                style={{ animationDelay: `${i * 70}ms` }}
               >
                 <span className="utility min-w-0 truncate !text-accent-ink whitespace-nowrap">
                   {role}
@@ -58,17 +52,38 @@ export function HeroSection({
               </span>
             ))}
           </div>
-          <h1 className="rise-in rise-in-d1 mt-6 text-5xl font-bold tracking-[-0.03em] text-balance sm:text-6xl md:text-7xl">
-            <GoldDot text={hero.name} />
+          <h1
+            className="mt-6 text-5xl font-bold tracking-[-0.03em] text-balance sm:text-6xl md:text-7xl"
+            aria-label={`${words.join(" ")}.`}
+          >
+            {words.map((w, i) => (
+              <span key={i} aria-hidden className="word-mask">
+                <span style={{ animationDelay: `${wordBase + i * wordStep}s` }}>{w}</span>
+                {i < words.length - 1 ? <span className="inline-block">&nbsp;</span> : null}
+              </span>
+            ))}
+            <span
+              aria-hidden
+              className="dot-land text-accent"
+              style={{ animationDelay: `${dotDelay}s` }}
+            >
+              .
+            </span>
           </h1>
-          <p className="rise-in rise-in-d2 mt-6 max-w-xl text-base leading-relaxed text-pretty text-muted md:text-lg">
+          <p
+            className="rise-in mt-6 max-w-xl text-base leading-relaxed text-pretty text-muted md:text-lg"
+            style={{ animationDelay: `${dotDelay + 0.1}s` }}
+          >
             {hero.shortBio}
           </p>
-          <div className="rise-in rise-in-d3 mt-9 flex flex-wrap items-center gap-3">
+          <div
+            className="rise-in mt-9 flex flex-wrap items-center gap-3"
+            style={{ animationDelay: `${dotDelay + 0.2}s` }}
+          >
             {workAnchor && (
               <a
                 href={workAnchor}
-                className="group inline-flex items-center gap-2 rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85"
+                className="group inline-flex items-center gap-2 rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-[opacity,transform] duration-200 hover:opacity-85 active:scale-[0.98]"
               >
                 View my work
                 <ArrowRight
@@ -82,7 +97,7 @@ export function HeroSection({
                 href={contact.resumeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group inline-flex items-center gap-2 rounded-[14px] border border-line bg-surface px-5 py-3 text-sm font-medium text-ink transition-colors duration-200 hover:border-ink/30"
+                className="group inline-flex items-center gap-2 rounded-[14px] border border-line bg-surface px-5 py-3 text-sm font-medium text-ink transition-[border-color,transform] duration-200 hover:border-ink/30 active:scale-[0.98]"
               >
                 Download resume
                 <Download
@@ -94,20 +109,7 @@ export function HeroSection({
           </div>
         </div>
 
-        <div className="rise-in rise-in-d2 relative mx-auto w-56 sm:w-64 md:w-full md:max-w-xs">
-          <DotGrid />
-          <div className="absolute inset-0 translate-x-3 translate-y-3 rounded-full bg-accent-soft" aria-hidden />
-          <div className="relative aspect-square overflow-hidden rounded-full border border-line bg-surface shadow-card">
-            {hero.photo.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={hero.photo.url} alt={hero.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-accent-ink/40 select-none">
-                {initials}
-              </div>
-            )}
-          </div>
-        </div>
+        <ParallaxPortrait name={hero.name} photoUrl={hero.photo.url} />
       </div>
     </section>
   );

@@ -60,22 +60,10 @@ body {
   }
 }
 
-/* Motion — 200ms ease-out, opacity + small translateY, no bounce (brand spec).
-   Scroll reveals only engage when JS is present and motion is allowed; without
-   either, content is simply visible. */
+/* Motion — one physics system: cubic-bezier(0.2,0.6,0.2,1), transform+opacity
+   only, no bounce. Hero choreography is CSS-first (plays without JS, instant
+   under reduced motion via the global override below). */
 @media (prefers-reduced-motion: no-preference) {
-  html.has-js [data-reveal] {
-    opacity: 0;
-    transform: translateY(14px);
-    transition:
-      opacity 450ms cubic-bezier(0.2, 0.6, 0.2, 1),
-      transform 450ms cubic-bezier(0.2, 0.6, 0.2, 1);
-  }
-  html.has-js [data-reveal].is-in {
-    opacity: 1;
-    transform: none;
-  }
-
   @keyframes rise-in {
     from {
       opacity: 0;
@@ -89,14 +77,79 @@ body {
   .rise-in {
     animation: rise-in 500ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
   }
-  .rise-in-d1 {
-    animation-delay: 80ms;
+
+  @keyframes word-rise {
+    from {
+      transform: translateY(110%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
-  .rise-in-d2 {
-    animation-delay: 160ms;
+  .word-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: top;
   }
-  .rise-in-d3 {
-    animation-delay: 240ms;
+  .word-mask > span {
+    display: inline-block;
+    animation: word-rise 600ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+
+  @keyframes dot-land {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .dot-land {
+    display: inline-block;
+    animation: dot-land 420ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+
+  @keyframes ambient-drift {
+    0% {
+      transform: translate3d(-3%, -2%, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(3%, 3%, 0) scale(1.08);
+    }
+    100% {
+      transform: translate3d(-3%, -2%, 0) scale(1);
+    }
+  }
+  .ambient {
+    animation: ambient-drift 60s ease-in-out infinite;
+  }
+}
+
+/* Lenis smooth scroll */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Custom cursor — native cursor hidden only on precise pointers while the
+   replacement is mounted; text fields always get the native cursor back. */
+@media (pointer: fine) {
+  html.custom-cursor,
+  html.custom-cursor * {
+    cursor: none !important;
+  }
+  html.custom-cursor input,
+  html.custom-cursor textarea,
+  html.custom-cursor select {
+    cursor: auto !important;
   }
 }
 

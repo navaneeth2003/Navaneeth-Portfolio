@@ -1,4 +1,5 @@
 import type { ImageRef } from "@/lib/types";
+import { AnimatedHeading, Rise } from "./motion/primitives";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -93,13 +94,15 @@ export function SectionShell({
 }) {
   return (
     <section id={id} className="scroll-mt-24 px-5 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl py-16 md:py-24" data-reveal>
-        <p className="utility flex items-center gap-2 !text-accent-ink">
-          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
-          {eyebrow}
-        </p>
+      <div className="mx-auto max-w-6xl py-16 md:py-24">
+        <Rise y={10}>
+          <p className="utility flex items-center gap-2 !text-accent-ink">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+            {eyebrow}
+          </p>
+        </Rise>
         <h2 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-balance sm:text-4xl md:text-5xl">
-          <GoldDot text={heading} />
+          <AnimatedHeading text={heading} />
         </h2>
         <div className="mt-10 md:mt-14">{children}</div>
       </div>
