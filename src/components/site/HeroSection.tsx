@@ -35,27 +35,46 @@ export function HeroSection({
     .map((w) => w.charAt(0))
     .join("");
 
+  // "APM, Ex-Founder, CS Engineer" reads as separate credentials — render it as
+  // wrapping pills so nothing ever truncates, at any width.
+  const roles = hero.tagline
+    .split(/\s*[,•·|]\s*/)
+    .map((r) => r.trim())
+    .filter(Boolean);
+
   return (
     <section id="top" className="px-5 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 py-16 md:grid-cols-[1.2fr_1fr] md:py-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 py-16 md:grid-cols-[1.2fr_1fr] md:py-28">
         <div className="min-w-0">
-          <span className="flex max-w-fit rounded-full bg-accent-soft px-4 py-1.5">
-            <span className="utility min-w-0 truncate !text-accent-ink whitespace-nowrap">
-              {hero.tagline}
-            </span>
-          </span>
-          <h1 className="mt-6 text-5xl font-bold tracking-tight text-balance md:text-6xl">
+          <div className="rise-in flex flex-wrap gap-2">
+            {roles.map((role, i) => (
+              <span
+                key={i}
+                className="inline-flex max-w-full rounded-full bg-accent-soft px-3.5 py-1.5"
+              >
+                <span className="utility min-w-0 truncate !text-accent-ink whitespace-nowrap">
+                  {role}
+                </span>
+              </span>
+            ))}
+          </div>
+          <h1 className="rise-in rise-in-d1 mt-6 text-5xl font-bold tracking-[-0.03em] text-balance sm:text-6xl md:text-7xl">
             <GoldDot text={hero.name} />
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-muted md:text-lg">{hero.shortBio}</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <p className="rise-in rise-in-d2 mt-6 max-w-xl text-base leading-relaxed text-pretty text-muted md:text-lg">
+            {hero.shortBio}
+          </p>
+          <div className="rise-in rise-in-d3 mt-9 flex flex-wrap items-center gap-3">
             {workAnchor && (
               <a
                 href={workAnchor}
-                className="inline-flex items-center gap-2 rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85"
+                className="group inline-flex items-center gap-2 rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85"
               >
                 View my work
-                <ArrowRight className="h-4 w-4" strokeWidth={2} />
+                <ArrowRight
+                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                  strokeWidth={2}
+                />
               </a>
             )}
             {contact.resumeUrl && (
@@ -63,19 +82,22 @@ export function HeroSection({
                 href={contact.resumeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-[14px] border border-line bg-surface px-5 py-3 text-sm font-medium text-ink transition-colors duration-200 hover:border-ink/30"
+                className="group inline-flex items-center gap-2 rounded-[14px] border border-line bg-surface px-5 py-3 text-sm font-medium text-ink transition-colors duration-200 hover:border-ink/30"
               >
                 Download resume
-                <Download className="h-4 w-4" strokeWidth={2} />
+                <Download
+                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-y-0.5"
+                  strokeWidth={2}
+                />
               </a>
             )}
           </div>
         </div>
 
-        <div className="relative mx-auto w-56 sm:w-64 md:w-full md:max-w-xs">
+        <div className="rise-in rise-in-d2 relative mx-auto w-56 sm:w-64 md:w-full md:max-w-xs">
           <DotGrid />
           <div className="absolute inset-0 translate-x-3 translate-y-3 rounded-full bg-accent-soft" aria-hidden />
-          <div className="relative aspect-square overflow-hidden rounded-full border border-line bg-surface">
+          <div className="relative aspect-square overflow-hidden rounded-full border border-line bg-surface shadow-card">
             {hero.photo.url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={hero.photo.url} alt={hero.name} className="h-full w-full object-cover" />

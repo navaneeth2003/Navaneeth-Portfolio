@@ -26,7 +26,10 @@ export function ToolsSection({ items }: { items: ToolItem[] }) {
     <SectionShell id="tools" eyebrow="Tools" heading="What I work with">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((tool) => (
-          <div key={tool.id} className="card flex items-center gap-3.5 !rounded-2xl !p-4">
+          <div
+            key={tool.id}
+            className="card flex items-center gap-3.5 !rounded-2xl !p-4 transition-colors duration-200 hover:border-ink/15"
+          >
             <RatioImage
               image={tool.icon}
               alt=""

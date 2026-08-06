@@ -5,10 +5,13 @@ import { GoldDot } from "./shared";
 export function SiteFooter({ contact, name }: { contact: ContactInfo; name: string }) {
   const year = new Date().getFullYear();
   return (
-    <footer id="contact" className="mt-16 scroll-mt-24 border-t border-line bg-surface px-5 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl py-16 md:py-20">
-        <p className="utility text-accent-ink">Contact</p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+    <footer id="contact" className="mt-16 scroll-mt-24 border-t border-line bg-surface px-5 sm:px-6 lg:px-8 md:mt-24">
+      <div className="mx-auto max-w-6xl py-16 md:py-24" data-reveal>
+        <p className="utility flex items-center gap-2 !text-accent-ink">
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+          Contact
+        </p>
+        <h2 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
           <GoldDot text="Let's talk" />
         </h2>
         <div className="mt-8 flex flex-wrap items-center gap-3">

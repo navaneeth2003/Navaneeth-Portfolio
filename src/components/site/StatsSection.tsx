@@ -16,30 +16,34 @@ export function StatsSection({ items }: { items: StatItem[] }) {
 
   return (
     <section id="stats" className="scroll-mt-24 px-5 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl py-6">
-        <div className={`card grid grid-cols-2 gap-px overflow-hidden !p-0 ${cols}`}>
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col items-center justify-center gap-1.5 px-4 py-7 text-center outline-1 outline-line"
-            >
-              <div className="flex h-9 items-center justify-center">
-                {item.value ? (
-                  <span className="text-3xl font-bold tracking-tight">{item.value}</span>
-                ) : item.icon?.url ? (
-                  <RatioImage
-                    image={item.icon}
-                    alt=""
-                    className="h-9 w-9 rounded-lg"
-                    fallbackText={item.label}
-                  />
-                ) : (
-                  <BadgeCheck className="h-8 w-8 text-accent" strokeWidth={2} />
-                )}
+      <div className="mx-auto max-w-6xl py-6" data-reveal>
+        <div className="card overflow-hidden !p-0">
+          <div className={`grid grid-cols-2 gap-px bg-line ${cols}`}>
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-col items-center justify-center gap-1.5 bg-surface px-4 py-8 text-center"
+              >
+                <div className="flex h-10 items-center justify-center">
+                  {item.value ? (
+                    <span className="text-3xl font-bold tracking-tight md:text-4xl">
+                      {item.value}
+                    </span>
+                  ) : item.icon?.url ? (
+                    <RatioImage
+                      image={item.icon}
+                      alt=""
+                      className="h-9 w-9 rounded-lg"
+                      fallbackText={item.label}
+                    />
+                  ) : (
+                    <BadgeCheck className="h-8 w-8 text-accent" strokeWidth={2} />
+                  )}
+                </div>
+                <span className="text-sm font-medium text-muted">{item.label}</span>
               </div>
-              <span className="text-sm font-medium text-muted">{item.label}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

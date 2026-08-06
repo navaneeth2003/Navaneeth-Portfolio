@@ -4,7 +4,7 @@ import { formatMonth, RatioImage, SectionShell } from "./shared";
 
 function CertificationCard({ item }: { item: CertificationItem }) {
   return (
-    <article className="card flex flex-col p-6">
+    <article className="card flex flex-col p-6 transition-colors duration-200 hover:border-ink/15">
       <div className="flex items-start gap-4">
         {item.badge?.url ? (
           <RatioImage

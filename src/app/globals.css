@@ -60,6 +60,46 @@ body {
   }
 }
 
+/* Motion — 200ms ease-out, opacity + small translateY, no bounce (brand spec).
+   Scroll reveals only engage when JS is present and motion is allowed; without
+   either, content is simply visible. */
+@media (prefers-reduced-motion: no-preference) {
+  html.has-js [data-reveal] {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 450ms cubic-bezier(0.2, 0.6, 0.2, 1),
+      transform 450ms cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+  html.has-js [data-reveal].is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .rise-in {
+    animation: rise-in 500ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+  .rise-in-d1 {
+    animation-delay: 80ms;
+  }
+  .rise-in-d2 {
+    animation-delay: 160ms;
+  }
+  .rise-in-d3 {
+    animation-delay: 240ms;
+  }
+}
+
 /* Utility face — captions, labels, dates */
 .utility {
   font-size: 11px;

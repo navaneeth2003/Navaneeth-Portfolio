@@ -6,6 +6,7 @@ import { EducationSection } from "./EducationSection";
 import { ExperienceSection } from "./ExperienceSection";
 import { HeroSection } from "./HeroSection";
 import { ProjectsSection } from "./ProjectsSection";
+import { RevealObserver } from "./RevealObserver";
 import { SiteFooter } from "./SiteFooter";
 import { SiteNav } from "./SiteNav";
 import { SkillsSection } from "./SkillsSection";
@@ -46,8 +47,15 @@ export function PublicSite({ content }: { content: SiteContent }) {
 
   return (
     <div className="min-h-screen bg-bg text-ink">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-[12px] focus:bg-ink focus:px-4 focus:py-2.5 focus:text-sm focus:font-medium focus:text-white"
+      >
+        Skip to content
+      </a>
+      <RevealObserver />
       <SiteNav content={content} />
-      <main>
+      <main id="main">
         <HeroSection hero={content.hero} contact={content.contact} workAnchor={workAnchor} />
         {sections.map(renderSection)}
       </main>

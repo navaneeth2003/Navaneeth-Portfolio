@@ -1,6 +1,9 @@
+"use client";
+
 import type { Section, SiteContent } from "@/lib/types";
 import { renderableSections } from "@/lib/types";
 import { ArrowUpRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import { GoldDot } from "./shared";
 
 const NAV_SECTIONS: Partial<Record<Section["type"], string>> = {
@@ -10,12 +13,58 @@ const NAV_SECTIONS: Partial<Record<Section["type"], string>> = {
   skills: "Skills",
 };
 
+function NavLink({
+  href,
+  label,
+  active,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <a
+      href={href}
+      aria-current={active ? "true" : undefined}
+      className={`group relative text-sm font-medium transition-colors duration-200 ${
+        active ? "text-ink" : "text-muted hover:text-ink"
+      }`}
+    >
+      {label}
+      <span
+        aria-hidden
+        className={`absolute -bottom-1.5 left-0 h-0.5 w-full origin-left rounded-full bg-accent transition-transform duration-200 ${
+          active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-50"
+        }`}
+      />
+    </a>
+  );
+}
+
 export function SiteNav({ content }: { content: SiteContent }) {
   const links = renderableSections(content)
     .filter((s) => NAV_SECTIONS[s.type])
     .map((s) => ({ href: `#${s.type}`, label: NAV_SECTIONS[s.type]! }));
 
   const firstName = content.hero.name.trim().split(/\s+/)[0] || "Portfolio";
+  const [active, setActive] = useState<string>("");
+  const sectionIds = [...links.map((l) => l.href.slice(1)), "contact"].join(",");
+
+  // Scroll-spy: the link whose section occupies the middle of the viewport is lit.
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length > 0) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-35% 0px -60% 0px" },
+    );
+    sectionIds.split(",").forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+    return () => io.disconnect();
+  }, [sectionIds]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/85 backdrop-blur">
@@ -25,20 +74,9 @@ export function SiteNav({ content }: { content: SiteContent }) {
         </a>
         <nav className="hidden items-center gap-7 md:flex" aria-label="Sections">
           {links.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="text-sm font-medium text-muted transition-colors duration-200 hover:text-ink"
-            >
-              {l.label}
-            </a>
+            <NavLink key={l.href} href={l.href} label={l.label} active={active === l.href.slice(1)} />
           ))}
-          <a
-            href="#contact"
-            className="text-sm font-medium text-muted transition-colors duration-200 hover:text-ink"
-          >
-            Contact
-          </a>
+          <NavLink href="#contact" label="Contact" active={active === "contact"} />
         </nav>
         {content.contact.resumeUrl ? (
           <a

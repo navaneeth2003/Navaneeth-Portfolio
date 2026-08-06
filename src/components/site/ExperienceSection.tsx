@@ -3,7 +3,7 @@ import { formatRange, Pill, RatioImage, SectionShell } from "./shared";
 
 function ExperienceCard({ item }: { item: ExperienceItem }) {
   return (
-    <article className="card p-6 md:p-8">
+    <article className="card p-6 transition-colors duration-200 hover:border-ink/15 md:p-8">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="flex min-w-0 items-center gap-4">
           <RatioImage
@@ -22,6 +22,16 @@ function ExperienceCard({ item }: { item: ExperienceItem }) {
         </span>
       </div>
 
+      {/* Outcome leads; bullets are the supporting evidence. */}
+      {item.highlight && (
+        <div className="mt-6 rounded-2xl border-l-2 border-accent bg-accent-soft/60 px-5 py-4">
+          <p className="utility !text-accent-ink/80">Key outcome</p>
+          <p className="mt-1.5 text-[15px] leading-relaxed font-medium text-accent-ink break-words">
+            {item.highlight}
+          </p>
+        </div>
+      )}
+
       {item.bullets.length > 0 && (
         <ul className="mt-6 space-y-3">
           {item.bullets.map((b, i) => (
@@ -31,12 +41,6 @@ function ExperienceCard({ item }: { item: ExperienceItem }) {
             </li>
           ))}
         </ul>
-      )}
-
-      {item.highlight && (
-        <p className="mt-6 rounded-2xl border-l-2 border-accent bg-accent-soft/60 px-5 py-4 text-[15px] leading-relaxed font-medium text-accent-ink break-words">
-          {item.highlight}
-        </p>
       )}
 
       {item.tags && item.tags.length > 0 && (

@@ -48,3 +48,21 @@ near-black type finished with a warm gold mark — repeats everywhere and is the
 
 200ms ease-out, opacity + small translateY only, no bounce. Fully disabled under
 `prefers-reduced-motion`.
+
+In practice: the hero rises in with a staggered fade on load; each section fades up
+once as it enters the viewport (`[data-reveal]` + `RevealObserver`, no-JS-safe — without
+JS everything is simply visible); hovers are border-color/lift/arrow-nudge only.
+
+## Elevated treatments (post-audit)
+
+- **Tagline as role pills.** The comma-separated tagline renders as wrapping pills
+  (one credential per pill) instead of a single truncating chip — nothing ever clips,
+  at any width. The 80-char limit still applies in the studio.
+- **Outcome-first experience cards.** The highlight renders as a labeled "Key outcome"
+  gold callout *above* the bullets: recruiters scan the result first, then the evidence.
+- **Editorial About.** The first paragraph is set larger and darker as a lead; the rest
+  step down — one text block becomes a readable arc.
+- **Scroll-spy nav.** The active section gets a gold underline; hover shows a half-width
+  underline. The wordmark stays the anchor home.
+- **Designed placeholders.** Empty image slots render a dot-grid tile with an initial —
+  intentional, not broken — until real assets are uploaded through the studio.

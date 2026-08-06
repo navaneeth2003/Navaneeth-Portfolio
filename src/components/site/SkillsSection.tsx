@@ -10,7 +10,10 @@ export function SkillsSection({ items }: { items: SkillGroup[] }) {
     <SectionShell id="skills" eyebrow="Core skills" heading="How I think and work">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => (
-          <div key={group.id} className="card p-6 md:p-7">
+          <div
+            key={group.id}
+            className="card p-6 transition-colors duration-200 hover:border-ink/15 md:p-7"
+          >
             <h3 className="font-semibold tracking-tight break-words">{group.category}</h3>
             <div className="mt-4 flex flex-wrap gap-2">
               {group.skills.map((s, i) => (

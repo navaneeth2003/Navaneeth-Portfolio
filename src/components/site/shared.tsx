@@ -43,6 +43,10 @@ export function RatioImage({
       <div
         aria-hidden
         className={`${ratio} flex items-center justify-center overflow-hidden bg-accent-soft text-accent-ink/50 ${className}`}
+        style={{
+          backgroundImage: "radial-gradient(rgba(124, 90, 46, 0.16) 1px, transparent 1px)",
+          backgroundSize: "14px 14px",
+        }}
       >
         <span className="text-xl font-semibold select-none">{fallbackText?.trim().charAt(0) ?? ""}</span>
       </div>
@@ -89,12 +93,15 @@ export function SectionShell({
 }) {
   return (
     <section id={id} className="scroll-mt-24 px-5 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl py-12 md:py-16">
-        <p className="utility text-accent-ink">{eyebrow}</p>
-        <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-balance md:text-4xl">
+      <div className="mx-auto max-w-6xl py-16 md:py-24" data-reveal>
+        <p className="utility flex items-center gap-2 !text-accent-ink">
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+          {eyebrow}
+        </p>
+        <h2 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-balance sm:text-4xl md:text-5xl">
           <GoldDot text={heading} />
         </h2>
-        <div className="mt-10">{children}</div>
+        <div className="mt-10 md:mt-14">{children}</div>
       </div>
     </section>
   );

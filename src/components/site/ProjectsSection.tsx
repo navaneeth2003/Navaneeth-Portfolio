@@ -5,12 +5,13 @@ import { Pill, RatioImage, SectionShell } from "./shared";
 
 function ProjectCard({ item }: { item: ProjectItem }) {
   return (
-    <article className="card flex flex-col overflow-hidden !p-0 transition-transform duration-200 hover:-translate-y-0.5">
+    <article className="group card flex flex-col overflow-hidden !p-0 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-ink/15">
       <RatioImage
         image={item.coverImage}
         alt=""
         fallbackText={item.title}
         className="border-b border-line"
+        imgClassName="transition-transform duration-200 group-hover:scale-[1.02]"
       />
       <div className="flex grow flex-col p-6 md:p-7">
         <h4 className="text-lg leading-snug font-semibold tracking-tight break-words">{item.title}</h4>
@@ -40,7 +41,7 @@ function ProjectCard({ item }: { item: ProjectItem }) {
                 href={item.caseStudyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors duration-200 hover:text-accent-ink"
+                className="group/link inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors duration-200 hover:text-accent-ink"
               >
                 <BookOpen className="h-4 w-4" strokeWidth={2} />
                 Read case study
@@ -51,10 +52,13 @@ function ProjectCard({ item }: { item: ProjectItem }) {
                 href={item.liveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors duration-200 hover:text-accent-ink"
+                className="group/link inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors duration-200 hover:text-accent-ink"
               >
                 View live
-                <ArrowUpRight className="h-4 w-4" strokeWidth={2} />
+                <ArrowUpRight
+                  className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5"
+                  strokeWidth={2}
+                />
               </a>
             )}
           </div>
