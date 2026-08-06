@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# next.js build output
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# env — real keys never get committed; .env.local.example is the template
+.env
+.env.local
+.env*.local
+
+# deployment
+.vercel/
+.firebase/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# claude code — personal settings stay local
+.claude/settings.local.json
