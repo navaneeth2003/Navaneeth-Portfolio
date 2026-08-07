@@ -6,16 +6,10 @@ import {
   restoreVersion,
   saveDraft,
 } from "@/lib/content";
-import { firebaseEnabled, getFirebaseAuth, OWNER_EMAIL } from "@/lib/firebase";
+import { getSupabase, isOwnerEmail, OWNER_EMAILS, supabaseEnabled } from "@/lib/supabase";
 import type { HistoryEntry, Section, SectionType, SiteContent } from "@/lib/types";
 import { SECTION_LABELS } from "@/lib/types";
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  type User,
-} from "firebase/auth";
+import type { User } from "@supabase/supabase-js";
 import {
   Award,
   BarChart3,
@@ -98,6 +92,10 @@ function BrandMark() {
 export function StudioApp() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authCode, setAuthCode] = useState("");
+  const [authStep, setAuthStep] = useState<"email" | "code">("email");
+  const [authBusy, setAuthBusy] = useState(false);
 
   const [draft, setDraft] = useState<SiteContent | null>(null);
   const [published, setPublished] = useState<SiteContent | null>(null);
@@ -114,8 +112,8 @@ export function StudioApp() {
   const skipNextSave = useRef(true);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const enabled = firebaseEnabled();
-  const authorized = Boolean(user?.email && user.email.toLowerCase() === OWNER_EMAIL && OWNER_EMAIL);
+  const enabled = supabaseEnabled();
+  const authorized = OWNER_EMAILS.length > 0 && isOwnerEmail(user?.email);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -125,7 +123,12 @@ export function StudioApp() {
 
   useEffect(() => {
     if (!enabled) return;
-    return onAuthStateChanged(getFirebaseAuth(), (u) => setUser(u));
+    const sb = getSupabase();
+    sb.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: sub } = sb.auth.onAuthStateChange((_event, session) =>
+      setUser(session?.user ?? null),
+    );
+    return () => sub.subscription.unsubscribe();
   }, [enabled]);
 
   useEffect(() => {
@@ -168,17 +171,44 @@ export function StudioApp() {
     return () => clearTimeout(t);
   }, [draft]);
 
-  async function handleSignIn() {
+  async function handleSendCode(e: React.FormEvent) {
+    e.preventDefault();
     setAuthError(null);
+    const email = authEmail.trim().toLowerCase();
+    if (OWNER_EMAILS.length === 0 || !isOwnerEmail(email)) {
+      setAuthError("This studio is private — that email doesn't have access.");
+      return;
+    }
+    setAuthBusy(true);
     try {
-      const cred = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
-      const email = cred.user.email?.toLowerCase();
-      if (!OWNER_EMAIL || email !== OWNER_EMAIL) {
-        await signOut(getFirebaseAuth());
-        setAuthError("This studio is private — that account doesn't have access.");
-      }
+      const { error } = await getSupabase().auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true },
+      });
+      if (error) throw error;
+      setAuthStep("code");
     } catch {
-      setAuthError("Sign-in didn't complete. Try again.");
+      setAuthError("Couldn't send the code. Wait a minute and try again.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthBusy(true);
+    try {
+      const { error } = await getSupabase().auth.verifyOtp({
+        email: authEmail.trim().toLowerCase(),
+        token: authCode.trim(),
+        type: "email",
+      });
+      if (error) throw error;
+    } catch {
+      setAuthError("That code didn't work — check it and try again.");
+    } finally {
+      setAuthBusy(false);
     }
   }
 
@@ -240,12 +270,14 @@ export function StudioApp() {
     return (
       <Splash>
         <BrandMark />
-        <h1 className="mt-4 text-xl font-semibold">Connect Firebase to open the studio</h1>
+        <h1 className="mt-4 text-xl font-semibold">Connect Supabase to open the studio</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Copy <code className="rounded bg-bg px-1.5 py-0.5">.env.local.example</code> to{" "}
-          <code className="rounded bg-bg px-1.5 py-0.5">.env.local</code> and fill in your Firebase
-          project keys, then restart the app. The public site keeps working from the built-in
-          content in the meantime.
+          Fill in <code className="rounded bg-bg px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+          <code className="rounded bg-bg px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in{" "}
+          <code className="rounded bg-bg px-1.5 py-0.5">.env.local</code>, run{" "}
+          <code className="rounded bg-bg px-1.5 py-0.5">supabase/setup.sql</code> in the SQL editor,
+          then restart the app. The public site keeps working from the built-in content in the
+          meantime.
         </p>
       </Splash>
     );
@@ -259,21 +291,91 @@ export function StudioApp() {
     );
   }
 
-  if (!user || !authorized) {
+  if (user && !authorized) {
+    return (
+      <Splash>
+        <div className="flex justify-center">
+          <BrandMark />
+        </div>
+        <h1 className="mt-4 text-xl font-semibold">This studio is private</h1>
+        <p className="mt-2 text-sm text-muted">
+          {user.email ?? "That account"} doesn&apos;t have access.
+        </p>
+        <button
+          type="button"
+          onClick={() => getSupabase().auth.signOut()}
+          className="mt-6 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85"
+        >
+          Sign out
+        </button>
+      </Splash>
+    );
+  }
+
+  if (!user) {
     return (
       <Splash>
         <div className="flex justify-center">
           <BrandMark />
         </div>
         <h1 className="mt-4 text-xl font-semibold">Content studio</h1>
-        <p className="mt-2 text-sm text-muted">Sign in with the owner account to edit the site.</p>
-        <button
-          type="button"
-          onClick={handleSignIn}
-          className="mt-6 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85"
-        >
-          Sign in with Google
-        </button>
+        {authStep === "email" ? (
+          <form onSubmit={handleSendCode}>
+            <p className="mt-2 text-sm text-muted">
+              Enter your email and we&apos;ll send you a sign-in code.
+            </p>
+            <input
+              type="email"
+              required
+              autoFocus
+              value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="mt-6 w-full rounded-[12px] border border-line bg-surface px-3.5 py-2.5 text-sm transition-colors duration-200 focus:border-accent focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={authBusy}
+              className="mt-3 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
+            >
+              {authBusy ? "Sending…" : "Email me a code"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyCode}>
+            <p className="mt-2 text-sm text-muted">
+              Enter the 6-digit code sent to {authEmail.trim()}.
+            </p>
+            <input
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              autoFocus
+              value={authCode}
+              onChange={(e) => setAuthCode(e.target.value)}
+              placeholder="123456"
+              className="mt-6 w-full rounded-[12px] border border-line bg-surface px-3.5 py-2.5 text-center text-lg tracking-[0.3em] transition-colors duration-200 focus:border-accent focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={authBusy}
+              className="mt-3 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
+            >
+              {authBusy ? "Checking…" : "Sign in"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthStep("email");
+                setAuthCode("");
+                setAuthError(null);
+              }}
+              className="mt-3 w-full text-sm font-medium text-muted transition-colors duration-200 hover:text-ink"
+            >
+              Use a different email
+            </button>
+          </form>
+        )}
         {authError && <p className="mt-4 text-sm text-danger">{authError}</p>}
       </Splash>
     );
@@ -446,7 +548,7 @@ export function StudioApp() {
           <p className="truncate text-xs text-muted">{user.email}</p>
           <button
             type="button"
-            onClick={() => signOut(getFirebaseAuth())}
+            onClick={() => getSupabase().auth.signOut()}
             className="mt-2 flex items-center gap-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-ink"
           >
             <LogOut className="h-4 w-4" strokeWidth={2} />

@@ -1,29 +1,31 @@
-import { doc, getDoc } from "firebase/firestore";
-import { firebaseEnabled, getDb } from "./firebase";
 import { SEED_CONTENT } from "./seed";
-import type { SiteContent, SiteDocument } from "./types";
+import { getSupabase, supabaseEnabled } from "./supabase";
+import type { SiteContent } from "./types";
 
 export type PublishedSite = {
   content: SiteContent;
   version: number | null;
-  live: boolean; // false → rendered from local seed (Firebase not configured/reachable)
+  live: boolean; // false → rendered from local seed (Supabase not configured/reachable)
 };
 
 /**
  * Server-side read of the published content. The public site never touches `draft`.
- * Falls back to the seed so the site renders before Firebase is provisioned.
+ * Falls back to the seed so the site renders before Supabase is provisioned.
  */
 export async function getPublishedSite(): Promise<PublishedSite> {
-  if (!firebaseEnabled()) {
+  if (!supabaseEnabled()) {
     return { content: SEED_CONTENT, version: null, live: false };
   }
   try {
-    const snap = await getDoc(doc(getDb(), "site", "main"));
-    if (!snap.exists()) {
+    const { data, error } = await getSupabase()
+      .from("site")
+      .select("published, version")
+      .eq("id", "main")
+      .maybeSingle();
+    if (error || !data) {
       return { content: SEED_CONTENT, version: null, live: false };
     }
-    const data = snap.data() as SiteDocument;
-    return { content: data.published, version: data.version, live: true };
+    return { content: data.published as SiteContent, version: data.version, live: true };
   } catch {
     return { content: SEED_CONTENT, version: null, live: false };
   }
