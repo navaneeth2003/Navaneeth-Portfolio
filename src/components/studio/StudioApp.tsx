@@ -183,12 +183,15 @@ export function StudioApp() {
     try {
       const { error } = await getSupabase().auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: true },
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/studio`,
+        },
       });
       if (error) throw error;
       setAuthStep("code");
     } catch {
-      setAuthError("Couldn't send the code. Wait a minute and try again.");
+      setAuthError("Couldn't send the email. Wait a minute and try again.");
     } finally {
       setAuthBusy(false);
     }
@@ -322,7 +325,7 @@ export function StudioApp() {
         {authStep === "email" ? (
           <form onSubmit={handleSendCode}>
             <p className="mt-2 text-sm text-muted">
-              Enter your email and we&apos;ll send you a sign-in code.
+              Enter your email and we&apos;ll send you a sign-in link.
             </p>
             <input
               type="email"
@@ -338,19 +341,18 @@ export function StudioApp() {
               disabled={authBusy}
               className="mt-3 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
             >
-              {authBusy ? "Sending…" : "Email me a code"}
+              {authBusy ? "Sending…" : "Email me a sign-in link"}
             </button>
           </form>
         ) : (
           <form onSubmit={handleVerifyCode}>
-            <p className="mt-2 text-sm text-muted">
-              Enter the 6-digit code sent to {authEmail.trim()}.
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Check {authEmail.trim()} and click the sign-in link — this page signs in by
+              itself. If your email shows a 6-digit code instead, enter it below.
             </p>
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
-              required
-              autoFocus
               value={authCode}
               onChange={(e) => setAuthCode(e.target.value)}
               placeholder="123456"
@@ -358,10 +360,10 @@ export function StudioApp() {
             />
             <button
               type="submit"
-              disabled={authBusy}
+              disabled={authBusy || authCode.trim().length === 0}
               className="mt-3 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
             >
-              {authBusy ? "Checking…" : "Sign in"}
+              {authBusy ? "Checking…" : "Sign in with code"}
             </button>
             <button
               type="button"
