@@ -13,6 +13,7 @@ export const CHAR_LIMITS = {
   skillGroup: { category: 40, skill: 40 },
   certification: { title: 90, issuer: 50 },
   education: { degree: 110, institution: 70 },
+  caseStudy: { heading: 90, body: 1200, metricValue: 12, metricLabel: 40 },
 } as const;
 
 export const ITEM_LIMITS = {
@@ -27,6 +28,8 @@ export const ITEM_LIMITS = {
   skillsPerGroup: 10,
   certifications: 12,
   education: 6,
+  caseStudyBlocks: 8,
+  caseStudyMetrics: 4,
 } as const;
 
 export const HISTORY_LIMIT = 20;

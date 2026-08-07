@@ -12,7 +12,7 @@ function TimelineNode() {
     <span aria-hidden className="absolute top-9 -left-[36px] flex h-2 w-2">
       <motion.span
         className="absolute inset-0 rounded-full bg-accent"
-        initial={{ scale: 0, opacity: 0 }}
+        initial={{ scale: 0.25, opacity: 0 }}
         whileInView={{ scale: 1, opacity: 1 }}
         viewport={{ once: true, margin: "0px 0px -30% 0px" }}
         transition={{ duration: 0.35, ease: EASE }}
@@ -58,29 +58,35 @@ function TimelineCard({ item }: { item: ExperienceItem }) {
             </motion.span>
           </div>
 
-          {/* Outcome leads; bullets are the evidence. The gold rule draws first. */}
+          {/* Outcome leads; bullets are the evidence. The gold rule draws first.
+              The visible panel observes; the zero-scale rule only follows variants. */}
           {item.highlight && (
-            <div className="relative mt-6 overflow-hidden rounded-2xl bg-accent-soft/60 px-5 py-4">
+            <motion.div
+              className="relative mt-6 overflow-hidden rounded-2xl bg-accent-soft/60 px-5 py-4"
+              initial="hide"
+              whileInView="show"
+              viewport={{ once: true, margin: "0px 0px -60px 0px" }}
+            >
               <motion.span
                 aria-hidden
                 className="absolute top-0 bottom-0 left-0 w-0.5 origin-top bg-accent"
-                initial={{ scaleY: 0 }}
-                whileInView={{ scaleY: 1 }}
-                viewport={{ once: true, margin: "0px 0px -60px 0px" }}
-                transition={{ duration: 0.45, ease: EASE, delay: 0.1 }}
+                variants={{
+                  hide: { scaleY: 0 },
+                  show: { scaleY: 1, transition: { duration: 0.45, ease: EASE, delay: 0.1 } },
+                }}
               />
               <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true, margin: "0px 0px -60px 0px" }}
-                transition={{ duration: 0.4, delay: 0.25 }}
+                variants={{
+                  hide: { opacity: 0 },
+                  show: { opacity: 1, transition: { duration: 0.4, delay: 0.25 } },
+                }}
               >
                 <p className="utility !text-accent-ink/80">Key outcome</p>
                 <p className="mt-1.5 text-[15px] leading-relaxed font-medium text-accent-ink break-words">
                   {item.highlight}
                 </p>
               </motion.div>
-            </div>
+            </motion.div>
           )}
 
           {item.bullets.length > 0 && (

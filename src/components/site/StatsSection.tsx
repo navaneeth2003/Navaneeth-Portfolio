@@ -2,10 +2,7 @@
 
 import type { StatItem } from "@/lib/types";
 import { BadgeCheck } from "lucide-react";
-import { animate, useInView } from "motion/react";
-import { useEffect, useRef } from "react";
-import { useMotionCtx } from "./motion/MotionProvider";
-import { Rise } from "./motion/primitives";
+import { CountValue, Rise } from "./motion/primitives";
 import { RatioImage } from "./shared";
 
 const COLS: Record<number, string> = {
@@ -16,42 +13,6 @@ const COLS: Record<number, string> = {
   5: "sm:grid-cols-3 lg:grid-cols-5",
   6: "sm:grid-cols-3 lg:grid-cols-6",
 };
-
-/** Counts the numeric part of "12+" up from zero once in view; static otherwise. */
-function StatValue({ value }: { value: string }) {
-  const { ok } = useMotionCtx();
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.6 });
-  const started = useRef(false);
-  const match = value.match(/^(\D*?)(\d+)(.*)$/);
-
-  useEffect(() => {
-    if (!ok || !inView || !match || started.current || !ref.current) return;
-    started.current = true;
-    const [, prefix, num, suffix] = match;
-    const target = parseInt(num, 10);
-    const controls = animate(0, target, {
-      duration: 0.8,
-      ease: "easeOut",
-      onUpdate: (v) => {
-        if (ref.current) ref.current.textContent = `${prefix}${Math.round(v)}`;
-      },
-      onComplete: () => {
-        if (ref.current) ref.current.textContent = `${prefix}${target}${suffix}`;
-      },
-    });
-    return () => controls.stop();
-  }, [ok, inView, match]);
-
-  return (
-    <>
-      <span className="sr-only">{value}</span>
-      <span ref={ref} aria-hidden>
-        {value}
-      </span>
-    </>
-  );
-}
 
 export function StatsSection({ items }: { items: StatItem[] }) {
   const cols = COLS[Math.min(items.length, 6)] ?? COLS[4];
@@ -72,7 +33,7 @@ export function StatsSection({ items }: { items: StatItem[] }) {
                   <div className="flex h-10 items-center justify-center">
                     {item.value ? (
                       <span className="text-3xl font-bold tracking-tight md:text-4xl">
-                        <StatValue value={item.value} />
+                        <CountValue value={item.value} />
                       </span>
                     ) : item.icon?.url ? (
                       <RatioImage

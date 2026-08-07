@@ -21,8 +21,8 @@ function LevelDots({ level, baseDelay }: { level: ProficiencyLevel; baseDelay: n
           <motion.span
             key={n}
             className="h-1.5 w-1.5 rounded-full bg-accent"
-            initial={{ scale: 0 }}
-            whileInView={{ scale: 1 }}
+            initial={{ scale: 0.5, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.3, ease: EASE, delay: baseDelay + 0.2 + n * 0.12 }}
           />

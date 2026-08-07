@@ -3,6 +3,8 @@
 import { CHAR_LIMITS, ITEM_LIMITS } from "@/lib/limits";
 import type {
   About,
+  CaseStudyBlock,
+  CaseStudyMetric,
   CertificationItem,
   ContactInfo,
   EducationItem,
@@ -14,8 +16,13 @@ import type {
   StatItem,
   ToolItem,
 } from "@/lib/types";
-import { PROFICIENCY_LEVELS, PROJECT_VERTICALS, SECTION_LABELS } from "@/lib/types";
-import { ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+import {
+  CASE_STUDY_STAGES,
+  PROFICIENCY_LEVELS,
+  PROJECT_VERTICALS,
+  SECTION_LABELS,
+} from "@/lib/types";
+import { ChevronDown, ChevronUp, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { newId, SelectField, TextAreaField, TextField } from "./fields";
 import { ImageField } from "./ImageField";
 import { EntityList, StringListEditor } from "./lists";
@@ -258,6 +265,146 @@ export function ExperienceForm({
   );
 }
 
+/** Compact value+label pair list for case study metrics. */
+function MetricsEditor({
+  metrics,
+  onChange,
+}: {
+  metrics: CaseStudyMetric[];
+  onChange: (metrics: CaseStudyMetric[]) => void;
+}) {
+  return (
+    <div>
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-medium text-ink">Metrics</span>
+        <span className="text-xs text-muted tabular-nums">
+          {metrics.length} of {ITEM_LIMITS.caseStudyMetrics}
+        </span>
+      </span>
+      <div className="mt-1.5 space-y-2">
+        {metrics.map((m, i) => (
+          <div key={m.id} className="flex items-center gap-1.5">
+            <input
+              className="w-24 rounded-[12px] border border-line bg-surface px-3 py-2 text-sm transition-colors duration-200 focus:border-accent focus:outline-none"
+              value={m.value}
+              maxLength={CHAR_LIMITS.caseStudy.metricValue}
+              placeholder="58%"
+              aria-label="Metric value"
+              onChange={(e) =>
+                onChange(metrics.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))
+              }
+            />
+            <input
+              className="min-w-0 flex-1 rounded-[12px] border border-line bg-surface px-3 py-2 text-sm transition-colors duration-200 focus:border-accent focus:outline-none"
+              value={m.label}
+              maxLength={CHAR_LIMITS.caseStudy.metricLabel}
+              placeholder="Higher user activation"
+              aria-label="Metric label"
+              onChange={(e) =>
+                onChange(metrics.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))
+              }
+            />
+            <button
+              type="button"
+              aria-label="Remove metric"
+              onClick={() => onChange(metrics.filter((_, j) => j !== i))}
+              className="shrink-0 rounded-md p-1.5 text-muted transition-colors duration-200 hover:text-danger"
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={2} />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          disabled={metrics.length >= ITEM_LIMITS.caseStudyMetrics}
+          onClick={() => onChange([...metrics, { id: newId("metric"), value: "", label: "" }])}
+          className="inline-flex items-center gap-1.5 rounded-[12px] border border-dashed border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          Add metric
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CaseStudyEditor({
+  project,
+  update,
+}: {
+  project: ProjectItem;
+  update: (patch: Partial<ProjectItem>) => void;
+}) {
+  const blocks = project.caseStudy?.blocks ?? [];
+
+  function setBlocks(next: CaseStudyBlock[]) {
+    update({ caseStudy: next.length > 0 ? { blocks: next } : undefined });
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-bg/60 p-4">
+      <p className="text-sm font-semibold">Case study</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted">
+        Tell the story right on the site, from problem to impact. With at least one part,
+        &ldquo;Read case study&rdquo; opens your on-site page instead of the external link.
+      </p>
+      <div className="mt-4">
+        <EntityList
+          items={blocks}
+          onChange={setBlocks}
+          max={ITEM_LIMITS.caseStudyBlocks}
+          addLabel="Add story part"
+          emptyLabel="Nothing here yet — add the first part of the story."
+          create={(): CaseStudyBlock => ({
+            id: newId("cs"),
+            stage: CASE_STUDY_STAGES[0],
+            heading: "",
+            body: "",
+          })}
+          itemTitle={(b) => (b.heading ? `${b.stage} — ${b.heading}` : b.stage)}
+          renderFields={(block, patch) => (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField
+                  label="Stage"
+                  value={block.stage}
+                  options={CASE_STUDY_STAGES}
+                  onChange={(stage) => patch({ stage })}
+                />
+                <TextField
+                  label="Heading"
+                  value={block.heading}
+                  max={CHAR_LIMITS.caseStudy.heading}
+                  onChange={(heading) => patch({ heading })}
+                />
+              </div>
+              <TextAreaField
+                label="Body"
+                value={block.body}
+                max={CHAR_LIMITS.caseStudy.body}
+                rows={6}
+                hint="A blank line starts a new paragraph."
+                onChange={(body) => patch({ body })}
+              />
+              <MetricsEditor
+                metrics={block.metrics ?? []}
+                onChange={(metrics) => patch({ metrics: metrics.length ? metrics : undefined })}
+              />
+              <ImageField
+                label="Image (optional)"
+                image={block.image}
+                ratio="16:9"
+                pathPrefix={`cs-${block.id}`}
+                onChange={(image) => patch({ image })}
+              />
+            </div>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ProjectsForm({
   items,
   onChange,
@@ -329,6 +476,7 @@ export function ProjectsForm({
               label="Case study URL (optional)"
               type="url"
               placeholder="https://…"
+              hint="Used only when there's no on-site case study below."
               value={item.caseStudyUrl ?? ""}
               onChange={(v) => update({ caseStudyUrl: v || undefined })}
             />
@@ -341,6 +489,7 @@ export function ProjectsForm({
             addLabel="Add tag"
             onChange={(tags) => update({ tags: tags.length ? tags : undefined })}
           />
+          <CaseStudyEditor project={item} update={update} />
         </div>
       )}
     />

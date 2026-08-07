@@ -56,6 +56,39 @@ export const PROJECT_VERTICALS = [
 
 export type ProjectVertical = (typeof PROJECT_VERTICALS)[number];
 
+// ---------- Case studies (Phase 2) ----------
+// A project may carry an on-site case study: an ordered sequence of story
+// blocks following the PM arc. With at least one block, "Read case study"
+// links to /case-study/[projectId] instead of the external URL.
+
+export const CASE_STUDY_STAGES = [
+  "Problem",
+  "Research",
+  "Insights",
+  "Strategy",
+  "Prioritization",
+  "Execution",
+  "Results",
+  "Impact",
+] as const;
+
+export type CaseStudyStage = (typeof CASE_STUDY_STAGES)[number];
+
+export type CaseStudyMetric = {
+  id: string;
+  value: string; // max 12 chars, e.g. "58%", "10+"
+  label: string; // max 40 chars
+};
+
+export type CaseStudyBlock = {
+  id: string;
+  stage: CaseStudyStage;
+  heading: string; // max 90 chars
+  body: string; // max 1200 chars; paragraphs split on blank lines
+  metrics?: CaseStudyMetric[]; // max 4
+  image?: ImageRef; // "16:9"
+};
+
 export type ProjectItem = {
   id: string;
   vertical: ProjectVertical;
@@ -64,7 +97,8 @@ export type ProjectItem = {
   overview: string; // max 600 chars
   resultsAndImpact?: string; // max 600 chars
   liveUrl?: string;
-  caseStudyUrl?: string;
+  caseStudyUrl?: string; // used when there is no on-site case study
+  caseStudy?: { blocks: CaseStudyBlock[] }; // max 8 blocks
   tags?: string[]; // max 6 items, each max 20 chars
 };
 

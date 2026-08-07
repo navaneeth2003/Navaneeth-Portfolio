@@ -228,6 +228,25 @@ physics; personality comes from *what* moves per section, never from new easings
 7. Contact finale
 8. QA gate (budget above)
 
-**Phase 2 (needs approval + content, separate effort):** in-site case study pages —
-sticky-scroll Problem → Research → Strategy → Execution → Results scenes with animated
-metrics, fed by a `caseStudy` schema extension and edited in the studio like everything else.
+## Phase 2 — delivered
+
+In-site case study pages, built 2026-08-06:
+
+- **Schema**: `ProjectItem.caseStudy.blocks` (max 8), each block = stage (fixed PM arc
+  vocabulary: Problem → Research → Insights → Strategy → Prioritization → Execution →
+  Results → Impact), heading (90), body (1200, blank-line paragraphs), up to 4 metrics
+  (count-up values), optional 16:9 image.
+- **Route**: `/case-study/[projectId]` renders from `published` only; 404s unless the
+  project has ≥1 block. Project cards link there instead of the external `caseStudyUrl`
+  once blocks exist.
+- **Experience**: title lands with the gold period, cover parallaxes, a sticky stage
+  rail (numbered, gold-lit by scroll position) tracks the story, metrics count up,
+  images de-blur in. Same motion physics, cursor, and footer as the rest of the site.
+- **Studio**: each project's form gains a "Case study" editor (blocks with drag
+  reorder, stage select, counters, metrics editor, crop-to-ratio images) — autosaved
+  to draft like everything else. The preview pane gains a page switcher (Home / any
+  draft case study) so stories are reviewable before publishing.
+- **Hard-won rule**: an element that starts scaled to zero or translated fully outside
+  an overflow-hidden mask has a zero-size intersection rect — it must never be its own
+  `whileInView` trigger. Observe an unclipped parent and drive the hidden child via
+  variants. This is now the pattern everywhere.

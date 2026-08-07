@@ -43,6 +43,10 @@ The owner email lives in three places on purpose: `.env.local` (client gate),
 - **Layout can't break.** Field lengths and list sizes are capped in the forms
   (`src/lib/limits.ts`), every image is force-cropped to its declared aspect ratio before
   upload, empty sections/verticals simply don't render, and components clamp/wrap defensively.
+- **Case studies.** A project can carry an on-site case study (Problem → Impact story
+  blocks with metrics and images), edited in the studio and served at
+  `/case-study/[projectId]`. With at least one block, the project card's "Read case
+  study" links there; otherwise it uses the external URL.
 
 Note: because the spec keeps everything in a single public-readable document, draft content is
 technically fetchable before it's published (the site never displays it). If that ever matters,

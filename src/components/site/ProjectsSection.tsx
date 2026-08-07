@@ -94,26 +94,32 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
 }
 
 function ProjectBody({ item }: { item: ProjectItem }) {
+  const hasOnSiteCaseStudy = Boolean(item.caseStudy?.blocks?.length);
   return (
     <div className="flex grow flex-col p-6 md:p-7">
       <h4 className="text-lg leading-snug font-semibold tracking-tight break-words">{item.title}</h4>
       <p className="mt-3 text-sm leading-relaxed text-muted break-words">{item.overview}</p>
 
       {item.resultsAndImpact && (
-        <div className="relative mt-5 overflow-hidden rounded-2xl bg-accent-soft/60 px-5 py-4">
+        <motion.div
+          className="relative mt-5 overflow-hidden rounded-2xl bg-accent-soft/60 px-5 py-4"
+          initial="hide"
+          whileInView="show"
+          viewport={{ once: true, margin: "0px 0px -60px 0px" }}
+        >
           <motion.span
             aria-hidden
             className="absolute top-0 bottom-0 left-0 w-0.5 origin-top bg-accent"
-            initial={{ scaleY: 0 }}
-            whileInView={{ scaleY: 1 }}
-            viewport={{ once: true, margin: "0px 0px -60px 0px" }}
-            transition={{ duration: 0.45, ease: EASE, delay: 0.15 }}
+            variants={{
+              hide: { scaleY: 0 },
+              show: { scaleY: 1, transition: { duration: 0.45, ease: EASE, delay: 0.15 } },
+            }}
           />
           <p className="utility !text-accent-ink">Results & impact</p>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft/90 break-words">
             {item.resultsAndImpact}
           </p>
-        </div>
+        </motion.div>
       )}
 
       {item.tags && item.tags.length > 0 && (
@@ -124,9 +130,17 @@ function ProjectBody({ item }: { item: ProjectItem }) {
         </div>
       )}
 
-      {(item.caseStudyUrl || item.liveUrl) && (
+      {(hasOnSiteCaseStudy || item.caseStudyUrl || item.liveUrl) && (
         <div className="mt-auto flex flex-wrap gap-x-6 gap-y-2 pt-6">
-          {item.caseStudyUrl && (
+          {hasOnSiteCaseStudy ? (
+            <a
+              href={`/case-study/${item.id}`}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors duration-200 hover:text-accent-ink"
+            >
+              <BookOpen className="h-4 w-4" strokeWidth={2} />
+              Read case study
+            </a>
+          ) : item.caseStudyUrl ? (
             <a
               href={item.caseStudyUrl}
               target="_blank"
@@ -136,7 +150,7 @@ function ProjectBody({ item }: { item: ProjectItem }) {
               <BookOpen className="h-4 w-4" strokeWidth={2} />
               Read case study
             </a>
-          )}
+          ) : null}
           {item.liveUrl && (
             <a
               href={item.liveUrl}
