@@ -1,8 +1,7 @@
 "use client";
 
-import { firebaseEnabled, getFirebaseStorage } from "@/lib/firebase";
+import { getSupabase, supabaseEnabled } from "@/lib/supabase";
 import type { AspectRatio, ImageRef } from "@/lib/types";
-import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
@@ -62,7 +61,7 @@ export function ImageField({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const enabled = firebaseEnabled();
+  const enabled = supabaseEnabled();
   const hasImage = Boolean(image?.url);
 
   function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -82,11 +81,14 @@ export function ImageField({
     setError(null);
     try {
       const blob = await cropToBlob(src, area);
-      const path = `images/${pathPrefix}-${Date.now()}.jpg`;
-      const ref = storageRef(getFirebaseStorage(), path);
-      await uploadBytes(ref, blob, { contentType: "image/jpeg" });
-      const url = await getDownloadURL(ref);
-      onChange({ url, aspectRatio: ratio });
+      const path = `${pathPrefix}-${Date.now()}.jpg`;
+      const sb = getSupabase();
+      const { error } = await sb.storage
+        .from("images")
+        .upload(path, blob, { contentType: "image/jpeg" });
+      if (error) throw error;
+      const { data } = sb.storage.from("images").getPublicUrl(path);
+      onChange({ url: data.publicUrl, aspectRatio: ratio });
       URL.revokeObjectURL(src);
       setSrc(null);
     } catch {
@@ -97,7 +99,7 @@ export function ImageField({
   }
 
   return (
-    <FieldShell label={label} hint={enabled ? `Cropped to ${ratio}` : "Connect Firebase to upload images."}>
+    <FieldShell label={label} hint={enabled ? `Cropped to ${ratio}` : "Connect Supabase to upload images."}>
       <div className="flex items-center gap-4">
         <div
           className={`${RATIO_CLASS[ratio]} flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-bg`}

@@ -89,12 +89,12 @@ Both areas render sections using the exact same set of components. There is only
 
 - Frontend: **Next.js** (App Router) with React and TypeScript.
   - The public site (`/`) is server-rendered from the `published` content for fast loads and SEO; the studio (`/studio`) is a client-side app behind auth.
-  - Hosting: Vercel (or Firebase App Hosting if keeping everything under Firebase is preferred).
-- Backend: Firebase.
-  - **Firestore** — one document holds the entire site's content (schema in section 5). This is small enough to comfortably fit Firestore's per-document size limit.
-  - **Firebase Auth** — email-based sign-in, restricted to Navaneeth's own email address. Reject any other account.
-  - **Firebase Storage** — image uploads (photo, logos, badges, icons, project cover images).
-- Provision the Firebase project (Firestore, Auth, Storage) as soon as the app needs storage or a login gate.
+  - Hosting: Vercel.
+- Backend: Supabase.
+  - **Postgres** — one row in a `site` table holds the entire site's content as jsonb (schema in section 5), with row-level security: public read, allowlisted-email write.
+  - **Supabase Auth** — email one-time-code sign-in, restricted to an allowlist of owner emails. Reject any other account.
+  - **Supabase Storage** — image uploads (photo, logos, badges, icons, project cover images) in a public `images` bucket.
+- Provision the Supabase project (one SQL script: `supabase/setup.sql`) as soon as the app needs storage or a login gate.
 
 ### 4.3 Draft, publish, and rollback
 
