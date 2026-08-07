@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #fafaf8;
+  --color-surface: #ffffff;
+  --color-ink: #0b0d10;
+  --color-ink-soft: #141718;
+  --color-muted: #687280;
+  --color-line: #e8e6e1;
+  --color-accent: #b9854c;
+  --color-accent-soft: #f3ead9;
+  --color-accent-ink: #7c5a2e;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --font-sans: var(--font-inter), Inter, system-ui, -apple-system, sans-serif;
+
+  --radius-card: 24px;
+  --radius-input: 12px;
+  --radius-btn: 14px;
+
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.04);
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+html {
+  @media (prefers-reduced-motion: no-preference) {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
+}
+
+/* Visible keyboard focus on every interactive element — quality floor, spec §8. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Motion — one physics system: cubic-bezier(0.2,0.6,0.2,1), transform+opacity
+   only, no bounce. Hero choreography is CSS-first (plays without JS, instant
+   under reduced motion via the global override below). */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .rise-in {
+    animation: rise-in 500ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+
+  @keyframes word-rise {
+    from {
+      transform: translateY(110%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  .word-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: top;
+  }
+  .word-mask > span {
+    display: inline-block;
+    animation: word-rise 600ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+
+  @keyframes dot-land {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .dot-land {
+    display: inline-block;
+    animation: dot-land 420ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+
+  @keyframes ambient-drift {
+    0% {
+      transform: translate3d(-3%, -2%, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(3%, 3%, 0) scale(1.08);
+    }
+    100% {
+      transform: translate3d(-3%, -2%, 0) scale(1);
+    }
+  }
+  .ambient {
+    animation: ambient-drift 60s ease-in-out infinite;
+  }
+}
+
+/* Lenis smooth scroll */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Custom cursor — native cursor hidden only on precise pointers while the
+   replacement is mounted; text fields always get the native cursor back. */
+@media (pointer: fine) {
+  html.custom-cursor,
+  html.custom-cursor * {
+    cursor: none !important;
+  }
+  html.custom-cursor input,
+  html.custom-cursor textarea,
+  html.custom-cursor select {
+    cursor: auto !important;
+  }
+}
+
+/* Utility face — captions, labels, dates */
+.utility {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
