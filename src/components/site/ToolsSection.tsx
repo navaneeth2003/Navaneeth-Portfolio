@@ -9,8 +9,8 @@ import { GhostTitle } from "./GhostTitle";
 
 const LEVEL_CONFIG: Record<ProficiencyLevel, { chip: string; dot: string }> = {
   Expert: {
-    chip: "bg-[#ff5a1a]/15 text-[#ff7a3d] border border-[#ff5a1a]/30",
-    dot: "bg-[#ff5a1a]",
+    chip: "bg-[var(--color-accent,#ff4a1a)]/15 text-[var(--color-accent,#ff4a1a)] border border-[var(--color-accent,#ff4a1a)]/30",
+    dot: "bg-[var(--color-accent,#ff4a1a)]",
   },
   Intermediate: {
     chip: "bg-white/10 text-white/90 border border-white/15",

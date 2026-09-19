@@ -124,13 +124,13 @@ export function Contact({ contact }: { contact: ContactInfo }) {
             onMouseLeave={handleMouseLeave}
             className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/25 backdrop-blur-xl"
           >
-            {/* Pure warm orange top hairline — zero mixed colors */}
+            {/* Themed top hairline */}
             <div
               aria-hidden
-              className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff5a1a]/80 to-transparent"
+              className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--color-accent,#ff4a1a)]/80 to-transparent"
             />
 
-            {/* Pure warm orange glow with buttery delayed cursor follow — strictly contained in card */}
+            {/* Themed atmospheric glow with buttery delayed cursor follow — strictly contained in card */}
             <div
               ref={glowRef}
               aria-hidden
@@ -138,7 +138,7 @@ export function Contact({ contact }: { contact: ContactInfo }) {
               style={{
                 opacity: isHovered ? 1 : 0.28,
                 background:
-                  "radial-gradient(circle, rgba(255, 90, 26, 0.38) 0%, rgba(255, 110, 35, 0.22) 32%, rgba(255, 130, 45, 0.08) 55%, transparent 75%)",
+                  "radial-gradient(circle, rgba(var(--color-glow-rgb, 255, 74, 26), 0.38) 0%, rgba(var(--color-glow-rgb, 255, 74, 26), 0.22) 32%, rgba(var(--color-glow-rgb, 255, 74, 26), 0.08) 55%, transparent 75%)",
                 transform: "translate3d(180px, 160px, 0)",
               }}
             />
@@ -155,8 +155,7 @@ export function Contact({ contact }: { contact: ContactInfo }) {
                   Let&apos;s talk.
                 </h3>
                 <p className="mt-4 max-w-[460px] font-heading text-[15px] font-light leading-[1.6] text-white/70 sm:text-[16px] md:mt-5 md:text-[18px]">
-                  Whether it&apos;s a role, a product idea or a quick question — email is the best
-                  way to reach me.
+                  Got a role, a product idea, or just a quick question? Email is the best way to reach me.
                 </p>
                 <div className="mt-7 grid grid-cols-1 sm:flex md:mt-8">
                   <MagneticButton href={`mailto:${contact.email.trim()}`} className={PRIMARY_BUTTON}>

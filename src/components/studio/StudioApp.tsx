@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  deleteHistoryEntry,
   loadOrSeedSite,
   publishDraft,
   restoreVersion,
   saveDraft,
+  updateHistoryEntryLabel,
 } from "@/lib/content";
 import { getSupabase, isOwnerEmail, OWNER_EMAILS, supabaseEnabled } from "@/lib/supabase";
 import type { HistoryEntry, Section, SectionType, SiteContent } from "@/lib/types";
@@ -38,6 +40,7 @@ import {
   AboutForm,
   CertificationsForm,
   ContactForm,
+  CustomSectionForm,
   EducationForm,
   ExperienceForm,
   HeroForm,
@@ -59,7 +62,8 @@ type Screen =
   | "contact"
   | "site"
   | "seo"
-  | SectionType;
+  | SectionType
+  | (string & {});
 
 const NAV: { key: Screen; label: string; Icon: typeof Home }[] = [
   { key: "overview", label: "Overview", Icon: Home },
@@ -120,6 +124,7 @@ export function StudioApp() {
   const [published, setPublished] = useState<SiteContent | null>(null);
   const [meta, setMeta] = useState<{ version: number; publishedAt: string } | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historicalPreview, setHistoricalPreview] = useState<HistoryEntry | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [screen, setScreen] = useState<Screen>("overview");
@@ -266,11 +271,49 @@ export function StudioApp() {
       setPublished(next.published);
       setMeta({ version: next.version, publishedAt: next.publishedAt });
       setHistory(next.history);
+      setHistoricalPreview(null);
       showToast(`Restored version ${entry.version}.`);
     } catch {
       showToast("Restore didn't go through. Try again.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  function handlePreviewVersion(entry: HistoryEntry) {
+    if (historicalPreview?.version === entry.version) {
+      setHistoricalPreview(null);
+      showToast("Exited historical preview.");
+    } else {
+      setHistoricalPreview(entry);
+      setShowPreview(true);
+      showToast(`Previewing version ${entry.version} (draft untouched).`);
+    }
+  }
+
+  async function handleRenameVersion(version: number, label: string) {
+    try {
+      const updated = await updateHistoryEntryLabel(version, label);
+      setHistory(updated);
+      if (historicalPreview?.version === version) {
+        setHistoricalPreview({ ...historicalPreview, label });
+      }
+      showToast("Version renamed.");
+    } catch {
+      showToast("Couldn't rename version. Try again.");
+    }
+  }
+
+  async function handleDeleteVersion(version: number) {
+    try {
+      const updated = await deleteHistoryEntry(version);
+      setHistory(updated);
+      if (historicalPreview?.version === version) {
+        setHistoricalPreview(null);
+      }
+      showToast("Version deleted from history.");
+    } catch {
+      showToast("Couldn't delete version. Try again.");
     }
   }
 
@@ -434,11 +477,17 @@ export function StudioApp() {
           : "";
 
   function getScreenLabel(key: Screen): string {
+    if (typeof key === "string" && key.startsWith("custom_")) {
+      const customId = key.replace("custom_", "");
+      const customSec = draft?.sections.find((s) => s.type === "custom" && s.id === customId);
+      if (customSec?.label?.trim()) return customSec.label.trim();
+      return "Custom Section";
+    }
     if (draft?.sections) {
       const section = draft.sections.find((s) => s.type === key);
       if (section?.label?.trim()) return section.label.trim();
     }
-    return SCREEN_TITLES[key] ?? key;
+    return (SCREEN_TITLES as Record<string, string>)[key] ?? key;
   }
 
   function renderScreen() {
@@ -486,12 +535,27 @@ export function StudioApp() {
           <SectionsManager
             sections={draft!.sections}
             onChange={(sections) => setDraft((d) => (d ? { ...d, sections } : d))}
+            onEditSection={(secKey) => setScreen(secKey as Screen)}
           />
         );
       case "preview":
         return (
           <div className="h-[calc(100vh-9rem)] min-h-[480px]">
-            <Preview draft={draft!} />
+            {historicalPreview && (
+              <div className="mb-3 flex items-center justify-between rounded-xl border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-warning">
+                <span className="font-semibold">
+                  Previewing Historical Version {historicalPreview.version} ({historicalPreview.label || formatWhen(historicalPreview.publishedAt)}) — Draft & Live Site Unchanged
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setHistoricalPreview(null)}
+                  className="rounded-md bg-warning/20 px-2.5 py-1 font-semibold text-warning transition-colors hover:bg-warning/30"
+                >
+                  Exit Historical Preview
+                </button>
+              </div>
+            )}
+            <Preview draft={historicalPreview ? historicalPreview.content : draft!} />
           </div>
         );
       case "history":
@@ -500,7 +564,11 @@ export function StudioApp() {
             history={history}
             currentVersion={meta!.version}
             currentPublishedAt={meta!.publishedAt}
+            previewingVersion={historicalPreview?.version}
+            onPreview={handlePreviewVersion}
             onRestore={handleRestore}
+            onRename={handleRenameVersion}
+            onDelete={handleDeleteVersion}
             busy={busy}
           />
         );
@@ -586,6 +654,56 @@ export function StudioApp() {
           <EducationForm items={s.items} onChange={(items) => patchSection("education", { items })} />
         ) : null;
       }
+      default: {
+        if (typeof screen === "string" && screen.startsWith("custom_")) {
+          const customId = screen.replace("custom_", "");
+          const customSec = draft?.sections.find(
+            (s): s is Extract<Section, { type: "custom" }> => s.type === "custom" && s.id === customId,
+          );
+          if (customSec) {
+            return (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-line pb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-ink">
+                      {customSec.label || "Custom Section"}
+                    </h2>
+                    <p className="text-xs text-muted">
+                      Template:{" "}
+                      <span className="font-semibold uppercase text-accent">
+                        {customSec.template}
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setScreen("sections")}
+                    className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-bg"
+                  >
+                    ← Back to Sections
+                  </button>
+                </div>
+                <CustomSectionForm
+                  section={customSec}
+                  onChange={(updated) => {
+                    setDraft((d) =>
+                      d
+                        ? {
+                            ...d,
+                            sections: d.sections.map((s) =>
+                              s.type === "custom" && s.id === customId ? updated : s,
+                            ),
+                          }
+                        : d,
+                    );
+                  }}
+                />
+              </div>
+            );
+          }
+        }
+        return null;
+      }
     }
   }
 
@@ -612,6 +730,25 @@ export function StudioApp() {
               {getScreenLabel(key)}
             </button>
           ))}
+          {draft?.sections
+            .filter((s): s is Extract<Section, { type: "custom" }> => s.type === "custom")
+            .map((cs) => {
+              const cKey = `custom_${cs.id}` as Screen;
+              return (
+                <button
+                  key={cKey}
+                  type="button"
+                  onClick={() => setScreen(cKey)}
+                  aria-current={screen === cKey ? "page" : undefined}
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-200 ${
+                    screen === cKey ? "bg-ink text-white" : "text-muted hover:bg-bg hover:text-ink"
+                  }`}
+                >
+                  <Layers className="h-4 w-4 text-accent" strokeWidth={2} />
+                  <span className="truncate">{cs.label || "Custom Section"}</span>
+                </button>
+              );
+            })}
         </nav>
         <div className="border-t border-line px-2 pt-4">
           <p className="truncate text-xs text-muted">{user.email}</p>
@@ -643,6 +780,13 @@ export function StudioApp() {
                     {getScreenLabel(n.key)}
                   </option>
                 ))}
+                {draft?.sections
+                  .filter((s): s is Extract<Section, { type: "custom" }> => s.type === "custom")
+                  .map((cs) => (
+                    <option key={`custom_${cs.id}`} value={`custom_${cs.id}`}>
+                      {cs.label || "Custom Section"} ({cs.template})
+                    </option>
+                  ))}
               </select>
               <h1 className="hidden truncate text-base font-semibold md:block">
                 {getScreenLabel(screen)}
@@ -702,8 +846,24 @@ export function StudioApp() {
           </main>
           {showPreview && screen !== "preview" && (
             <aside className="hidden w-[46%] shrink-0 border-l border-line p-4 lg:block xl:w-[42%]">
-              <div className="sticky top-20 h-[calc(100vh-6.5rem)]">
-                <Preview draft={draft} />
+              <div className="sticky top-20 flex h-[calc(100vh-6.5rem)] flex-col">
+                {historicalPreview && (
+                  <div className="mb-2 flex items-center justify-between rounded-xl border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs text-warning">
+                    <span className="truncate font-semibold">
+                      Viewing v{historicalPreview.version} ({historicalPreview.label || "Snapshot"})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHistoricalPreview(null)}
+                      className="ml-2 shrink-0 rounded bg-warning/20 px-2 py-0.5 text-[11px] font-semibold text-warning hover:bg-warning/30"
+                    >
+                      Exit
+                    </button>
+                  </div>
+                )}
+                <div className="min-h-0 flex-1">
+                  <Preview draft={historicalPreview ? historicalPreview.content : draft} />
+                </div>
               </div>
             </aside>
           )}

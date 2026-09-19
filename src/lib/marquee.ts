@@ -36,6 +36,7 @@ export function experienceLogo(content: SiteContent, name: string): string | und
 export type BannerCompanyItem = {
   id: string;
   name: string;
+  originalName?: string;
   isCustom: boolean;
   hasExperienceLogo: boolean;
   showLogo: boolean;
@@ -58,13 +59,15 @@ export function getBannerCompanies(content: SiteContent): BannerCompanyItem[] {
     seen.add(key);
     const expLogoSrc = experienceLogo(content, name);
     const override = overrides[key];
+    const displayName = override?.displayName?.trim() || name;
     const showLogo = override?.showLogo !== false;
     const customLogo = override?.customLogo;
     const logoSrc = !showLogo ? undefined : (customLogo?.url || expLogoSrc);
 
     result.push({
       id: `exp-${key}`,
-      name,
+      name: displayName,
+      originalName: name,
       isCustom: false,
       hasExperienceLogo: Boolean(expLogoSrc),
       showLogo,

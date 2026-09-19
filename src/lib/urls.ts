@@ -115,6 +115,20 @@ export function sanitizeContent(content: SiteContent): SiteContent {
               badge: optionalImg(i.badge),
             })),
           };
+        case "custom":
+          return {
+            ...s,
+            data: {
+              ...s.data,
+              image: optionalImg(s.data.image),
+              ctaUrl: safeLinkUrl(s.data.ctaUrl),
+              items: s.data.items?.map((item) => ({
+                ...item,
+                image: optionalImg(item.image),
+                linkUrl: safeLinkUrl(item.linkUrl),
+              })),
+            },
+          };
         default:
           return s;
       }

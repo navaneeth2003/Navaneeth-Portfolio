@@ -53,11 +53,18 @@ export function getEffectiveSeo(content: SiteContent): EffectiveSeo {
     twitterHandle = `@${twitterHandle}`;
   }
 
-  const ogImageUrl =
+  const rawOgImage =
     safeImageUrl(custom?.ogImage?.url) ||
-    safeImageUrl(hero.photo?.url);
+    safeImageUrl(hero.photo?.url) ||
+    "/og-image.jpg";
 
-  const faviconUrl = safeImageUrl(content.settings?.favicon?.url);
+  const ogImageUrl = rawOgImage.startsWith("http")
+    ? rawOgImage
+    : `${canonicalUrl.replace(/\/+$/, "")}${rawOgImage.startsWith("/") ? "" : "/"}${rawOgImage}`;
+
+  const faviconUrl =
+    safeImageUrl(content.settings?.favicon?.url) ||
+    `${canonicalUrl.replace(/\/+$/, "")}/favicon.svg`;
 
   const dev = custom?.developerCredit;
   const developer: DeveloperCredit = {

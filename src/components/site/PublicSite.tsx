@@ -19,6 +19,7 @@ import { CertificationsSection } from "./CertificationsSection";
 import { EducationSection } from "./EducationSection";
 import { JourneyFlow } from "./JourneyFlow";
 import { SiteProviders } from "./SiteProviders";
+import { CustomSection } from "./CustomSection";
 
 function renderSection(section: Section, categories?: string[]) {
   const title = section.label?.trim() || SECTION_LABELS[section.type];
@@ -39,6 +40,8 @@ function renderSection(section: Section, categories?: string[]) {
       return <CertificationsSection key="certifications" title={title} items={section.items} />;
     case "education":
       return <EducationSection key="education" title={title} items={section.items} />;
+    case "custom":
+      return <CustomSection key={section.id} title={title} data={section.data} />;
   }
 }
 
@@ -86,8 +89,8 @@ export function PublicSite({
     ...sections
       .filter((s) => middle.includes(s.type))
       .map((s) => ({
-        id: s.type,
-        href: `#${s.type}`,
+        id: s.type === "custom" ? `sec-${s.id}` : s.type,
+        href: s.type === "custom" ? `#sec-${s.id}` : `#${s.type}`,
         label: s.label?.trim() || (s.type === "projects" ? "Work" : SECTION_LABELS[s.type]),
       })),
     { id: "contact", href: "#contact", label: "Contact" },

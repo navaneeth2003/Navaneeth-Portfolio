@@ -10,6 +10,8 @@ export type ColorPalette = {
   textSub: string;
   accent: string;
   accentGlow: string;
+  glowRgb: string;
+  meltTint: string;
   swatches: string[];
 };
 
@@ -26,6 +28,8 @@ export const COLOR_PALETTES: ColorPalette[] = [
     textSub: "rgba(255, 255, 255, 0.82)",
     accent: "#ff4a1a",
     accentGlow: "#ff5a1a",
+    glowRgb: "255, 74, 26",
+    meltTint: "#3a0f06",
     swatches: ["#09090b", "#161616", "#ff4a1a", "#ffffff"],
   },
   {
@@ -40,6 +44,8 @@ export const COLOR_PALETTES: ColorPalette[] = [
     textSub: "rgba(255, 255, 255, 0.88)",
     accent: "#f1f5f9",
     accentGlow: "#94a3b8",
+    glowRgb: "241, 245, 249",
+    meltTint: "#181f2a",
     swatches: ["#0a0b0d", "#181b20", "#f1f5f9", "#94a3b8"],
   },
   {
@@ -54,7 +60,9 @@ export const COLOR_PALETTES: ColorPalette[] = [
     textSub: "rgba(224, 242, 254, 0.84)",
     accent: "#38bdf8",
     accentGlow: "#0284c7",
-    swatches: ["#040711", "#0f172a", "#38bdf8", "#3b82f6"],
+    glowRgb: "56, 189, 248",
+    meltTint: "#061d36",
+    swatches: ["#040711", "#0f172a", "#38bdf8", "#7dd3fc"],
   },
   {
     id: "emerald",
@@ -68,6 +76,8 @@ export const COLOR_PALETTES: ColorPalette[] = [
     textSub: "rgba(209, 250, 229, 0.84)",
     accent: "#10b981",
     accentGlow: "#059669",
+    glowRgb: "16, 185, 129",
+    meltTint: "#062819",
     swatches: ["#040d08", "#0d2217", "#10b981", "#34d399"],
   },
   {
@@ -82,6 +92,8 @@ export const COLOR_PALETTES: ColorPalette[] = [
     textSub: "rgba(254, 243, 199, 0.82)",
     accent: "#f59e0b",
     accentGlow: "#d97706",
+    glowRgb: "245, 158, 11",
+    meltTint: "#331b0c",
     swatches: ["#0d0a08", "#1f1914", "#f59e0b", "#fbbf24"],
   },
   {
@@ -96,6 +108,8 @@ export const COLOR_PALETTES: ColorPalette[] = [
     textSub: "rgba(255, 228, 230, 0.82)",
     accent: "#f43f5e",
     accentGlow: "#e11d48",
+    glowRgb: "244, 63, 94",
+    meltTint: "#360a16",
     swatches: ["#0a0607", "#1c1013", "#f43f5e", "#fda4af"],
   },
 ];

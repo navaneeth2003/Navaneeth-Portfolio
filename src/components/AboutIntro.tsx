@@ -13,12 +13,12 @@ export function AboutIntro({ data }: { data: About }) {
       className="relative scroll-mt-24 overflow-hidden bg-transparent px-5 pb-24 pt-14 sm:px-6 md:px-12 md:pb-44 md:pt-24"
     >
       <GridLines />
-      {/* bottom melt — red canvas mixes into the black the page settles on.
-          Ends in the exact canvas base (#0a0a0c) so the seam disappears into
-          a smooth color blend, never a hard cut. */}
+      {/* bottom melt — ambient hero glow smoothly transitions into the palette dark base.
+          Melts via the palette's subtle melt-tint into var(--color-bg) so the seam between
+          About and Stats disappears into a smooth continuous background across all palettes. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent via-[#3a0f06]/55 to-[#0a0a0c] md:h-72"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-b from-transparent via-[var(--color-melt-tint)]/60 to-[var(--color-bg)] md:h-80"
       />
       <div className="relative z-[2] mx-auto grid max-w-[1440px] grid-cols-1 items-start gap-6 md:gap-10 lg:grid-cols-2 lg:gap-16">
         <TextReveal

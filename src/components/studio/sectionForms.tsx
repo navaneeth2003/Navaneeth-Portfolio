@@ -10,6 +10,9 @@ import type {
   CompanyLogoOverride,
   ContactInfo,
   CustomCompany,
+  CustomSectionData,
+  CustomSectionItem,
+  CustomSectionTemplate,
   EducationItem,
   ExperienceItem,
   Hero,
@@ -36,6 +39,7 @@ import {
   Globe,
   MapPin,
   Palette,
+  Pencil,
   Plus,
   RotateCcw,
   Share2,
@@ -739,14 +743,289 @@ export function EducationForm({
   );
 }
 
-/** Sections move up/down and toggle as whole units — never rearranged internally. */
+export const SECTION_TEMPLATES: {
+  key: CustomSectionTemplate;
+  label: string;
+  description: string;
+  defaultTitle: string;
+  defaultData: Partial<CustomSectionData>;
+}[] = [
+  {
+    key: "story",
+    label: "Text / Story",
+    description: "Clean editorial storytelling layout with headline, lead-in, and narrative paragraphs.",
+    defaultTitle: "My Story",
+    defaultData: {
+      heading: "Building with clarity and purpose",
+      subheading: "Philosophy",
+      body: "Over the years, I've learned that exceptional product work is not just about features — it's about solving the right problem with extreme focus.\n\nFrom early-stage MVPs to growth optimization, having a direct link between user feedback and technical architecture is what turns good ideas into enduring businesses.",
+      ctaText: "Let's connect",
+      ctaUrl: "#contact",
+    },
+  },
+  {
+    key: "media-text",
+    label: "Image + Text",
+    description: "Visual storytelling with a side-by-side featured photo or graphic and narrative text.",
+    defaultTitle: "Visual Narrative",
+    defaultData: {
+      heading: "Bridging product vision & execution",
+      subheading: "Approach",
+      body: "Every product starts with understanding the user's workflow. Here is how I collaborate with engineering, design, and growth teams to ship cohesive experiences.",
+      ctaText: "View Case Studies",
+      ctaUrl: "#projects",
+    },
+  },
+  {
+    key: "grid",
+    label: "Cards / Grid",
+    description: "Multi-item grid layout perfect for principles, services, articles, or side projects.",
+    defaultTitle: "Featured Highlights",
+    defaultData: {
+      heading: "Areas of Focus",
+      subheading: "Capabilities",
+      body: "Core competencies honed across product strategy, data analysis, and technical execution.",
+      items: [
+        { id: "grid-1", title: "Product Strategy", subtitle: "Core", body: "Defining vision, roadmaps, and value metrics." },
+        { id: "grid-2", title: "Growth & Retention", subtitle: "Metrics", body: "Funnel optimization, experiment design, and onboarding." },
+        { id: "grid-3", title: "Technical Leadership", subtitle: "Engineering", body: "API design, architecture tradeoffs, and system scale." },
+      ],
+    },
+  },
+  {
+    key: "metrics",
+    label: "Metrics / Highlights",
+    description: "Prominent statistics and numerical milestones that quantify your impact.",
+    defaultTitle: "Impact & Numbers",
+    defaultData: {
+      heading: "Key Results",
+      subheading: "Performance",
+      body: "Quantified outcomes delivered across roles and products.",
+      items: [
+        { id: "m-1", highlight: "275%+", subtitle: "MRR Growth", body: "Achieved across product optimization cycles" },
+        { id: "m-2", highlight: "58%", subtitle: "Activation Lift", body: "Through onboarding simplification and testing" },
+        { id: "m-3", highlight: "12+", subtitle: "Projects Shipped", body: "From concept to production launch" },
+        { id: "m-4", highlight: "100%", subtitle: "Ownership", body: "End-to-end product delivery lifecycle" },
+      ],
+    },
+  },
+  {
+    key: "quote",
+    label: "Quote / Testimonial",
+    description: "Typography-led featured quote or client endorsement with attribution.",
+    defaultTitle: "Perspective",
+    defaultData: {
+      heading: "Navaneeth C L",
+      subheading: "Associate Product Manager",
+      body: "Great products are born at the intersection of empathy for users, curiosity for technology, and relentless focus on business outcomes.",
+    },
+  },
+  {
+    key: "cta",
+    label: "CTA / Callout",
+    description: "High-impact call-to-action banner driving visitors to take action or get in touch.",
+    defaultTitle: "Next Steps",
+    defaultData: {
+      heading: "Ready to build something meaningful together?",
+      subheading: "Collaboration",
+      body: "I'm always open to discussing new opportunities, advisory roles, and high-impact product challenges.",
+      ctaText: "Get in touch",
+      ctaUrl: "#contact",
+    },
+  },
+];
+
+export function CustomSectionForm({
+  section,
+  onChange,
+}: {
+  section: Extract<Section, { type: "custom" }>;
+  onChange: (s: Extract<Section, { type: "custom" }>) => void;
+}) {
+  const { data, template } = section;
+
+  function updateData(patch: Partial<CustomSectionData>) {
+    onChange({
+      ...section,
+      data: { ...data, ...patch },
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between rounded-xl border border-line bg-surface/50 p-4">
+        <div>
+          <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+            Template: {template}
+          </span>
+          <p className="mt-1 text-sm font-semibold text-ink">{section.label}</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <TextField
+          label="Section Heading"
+          value={data.heading}
+          placeholder="Main section heading"
+          onChange={(heading) => updateData({ heading })}
+        />
+
+        <TextField
+          label="Lead / Subheading (optional)"
+          value={data.subheading ?? ""}
+          placeholder="e.g. Philosophy, Capabilities, Vision"
+          onChange={(subheading) => updateData({ subheading: subheading || undefined })}
+        />
+
+        {(template === "story" || template === "media-text" || template === "quote" || template === "cta") && (
+          <TextAreaField
+            label={template === "quote" ? "Quote Text" : "Body Narrative"}
+            value={data.body ?? ""}
+            max={2000}
+            rows={template === "story" ? 8 : 4}
+            hint={template === "story" ? "Double enter creates separate paragraphs." : undefined}
+            onChange={(body) => updateData({ body: body || undefined })}
+          />
+        )}
+
+        {template === "media-text" && (
+          <ImageField
+            label="Featured Media"
+            image={data.image}
+            ratio="4:3"
+            pathPrefix={`custom-${section.id}`}
+            onChange={(image) => updateData({ image })}
+          />
+        )}
+
+        {(template === "story" || template === "media-text" || template === "cta") && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="CTA Button Label (optional)"
+              value={data.ctaText ?? ""}
+              placeholder="e.g. Let's talk, Read more"
+              onChange={(ctaText) => updateData({ ctaText: ctaText || undefined })}
+            />
+            <TextField
+              label="CTA Target Link (optional)"
+              value={data.ctaUrl ?? ""}
+              placeholder="e.g. #contact, https://..."
+              onChange={(ctaUrl) => updateData({ ctaUrl: ctaUrl || undefined })}
+            />
+          </div>
+        )}
+      </div>
+
+      {(template === "grid" || template === "metrics") && (
+        <div className="border-t border-line pt-4">
+          <h4 className="mb-3 text-sm font-semibold text-ink">
+            {template === "metrics" ? "Metrics & Highlights" : "Grid Cards"}
+          </h4>
+          <EntityList
+            items={data.items ?? []}
+            onChange={(items) => updateData({ items })}
+            max={12}
+            addLabel={template === "metrics" ? "Add metric" : "Add card"}
+            emptyLabel="No items yet. Click add to create the first card."
+            create={(): CustomSectionItem => ({
+              id: newId("citem"),
+              title: "",
+              subtitle: "",
+              body: "",
+              highlight: template === "metrics" ? "100%" : undefined,
+            })}
+            itemTitle={(item) => item.highlight || item.title || "Untitled item"}
+            renderFields={(item, update) => (
+              <div className="space-y-4">
+                {template === "metrics" ? (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <TextField
+                        label="Number / Metric Highlight"
+                        value={item.highlight ?? ""}
+                        placeholder="e.g. 275%+, $1.2M, 50k"
+                        onChange={(highlight) => update({ highlight })}
+                      />
+                      <TextField
+                        label="Metric Label"
+                        value={item.subtitle ?? ""}
+                        placeholder="e.g. MRR Growth, Active Users"
+                        onChange={(subtitle) => update({ subtitle })}
+                      />
+                    </div>
+                    <TextField
+                      label="Short Description / Detail"
+                      value={item.body ?? ""}
+                      placeholder="e.g. Through onboarding optimization"
+                      onChange={(body) => update({ body })}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <TextField
+                        label="Card Title"
+                        value={item.title ?? ""}
+                        placeholder="Title"
+                        onChange={(title) => update({ title })}
+                      />
+                      <TextField
+                        label="Category / Tag"
+                        value={item.subtitle ?? ""}
+                        placeholder="e.g. Strategy, Growth"
+                        onChange={(subtitle) => update({ subtitle })}
+                      />
+                    </div>
+                    <TextAreaField
+                      label="Card Description"
+                      value={item.body ?? ""}
+                      max={1000}
+                      rows={3}
+                      onChange={(body) => update({ body })}
+                    />
+                    <ImageField
+                      label="Card Image (optional)"
+                      image={item.image}
+                      ratio="16:9"
+                      pathPrefix={`item-${item.id}`}
+                      onChange={(image) => update({ image })}
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <TextField
+                        label="Link Text (optional)"
+                        value={item.linkText ?? ""}
+                        placeholder="e.g. Learn more"
+                        onChange={(linkText) => update({ linkText })}
+                      />
+                      <TextField
+                        label="Link URL (optional)"
+                        value={item.linkUrl ?? ""}
+                        placeholder="https://..."
+                        onChange={(linkUrl) => update({ linkUrl })}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Sections move up/down and toggle as whole units — supports custom templates. */
 export function SectionsManager({
   sections,
   onChange,
+  onEditSection,
 }: {
   sections: Section[];
   onChange: (sections: Section[]) => void;
+  onEditSection?: (sectionScreen: string) => void;
 }) {
+  const [showAddModal, setShowAddModal] = useState(false);
   const ordered = [...sections].sort((a, b) => a.order - b.order);
 
   function commit(list: Section[]) {
@@ -761,86 +1040,208 @@ export function SectionsManager({
     commit(next);
   }
 
+  function handleAddCustomSection(templateKey: CustomSectionTemplate) {
+    const template = SECTION_TEMPLATES.find((t) => t.key === templateKey);
+    if (!template) return;
+    const secId = newId("sec");
+    const newSection: Section = {
+      type: "custom",
+      id: secId,
+      template: template.key,
+      visible: true,
+      order: sections.length + 1,
+      label: template.defaultTitle,
+      data: {
+        id: newId("cust"),
+        template: template.key,
+        heading: template.defaultData.heading ?? "",
+        subheading: template.defaultData.subheading,
+        body: template.defaultData.body,
+        ctaText: template.defaultData.ctaText,
+        ctaUrl: template.defaultData.ctaUrl,
+        items: template.defaultData.items ? [...template.defaultData.items] : [],
+      },
+    };
+    onChange([...sections, newSection]);
+    setShowAddModal(false);
+    onEditSection?.(`custom_${secId}`);
+  }
+
+  function handleDeleteCustomSection(id: string) {
+    onChange(sections.filter((s) => s.type !== "custom" || s.id !== id));
+  }
+
+  function isSameSection(a: Section, b: Section): boolean {
+    if (a.type === "custom" && b.type === "custom") return a.id === b.id;
+    return a.type === b.type;
+  }
+
   function itemCount(s: Section): string {
     if (s.type === "about") return "";
+    if (s.type === "custom") {
+      const cnt = s.data.items?.length ?? 0;
+      return cnt > 0 ? `${cnt} items` : s.template;
+    }
     return `${s.items.length} ${s.items.length === 1 ? "item" : "items"}`;
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted">
-        Hidden sections stay editable but don&apos;t appear on the site. Your hero and contact info
-        are always on the page.
-      </p>
-      {ordered.map((s, i) => (
-        <div
-          key={s.type}
-          className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3"
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted">
+          Reorder or hide sections. Add new curated sections matching the site design.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowAddModal((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-85"
         >
-          <div className="flex flex-col">
+          <Plus className="h-3.5 w-3.5" />
+          Add Section
+        </button>
+      </div>
+
+      {/* Add Section Template Selector Modal / Panel */}
+      {showAddModal && (
+        <div className="rounded-2xl border border-accent/30 bg-accent-soft/30 p-4">
+          <div className="flex items-center justify-between pb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+              Choose a Section Template
+            </h4>
             <button
               type="button"
-              aria-label={`Move ${SECTION_LABELS[s.type]} up`}
-              disabled={i === 0}
-              onClick={() => move(i, -1)}
-              className="rounded p-0.5 text-muted hover:text-ink disabled:opacity-30"
+              onClick={() => setShowAddModal(false)}
+              className="rounded p-1 text-muted hover:text-ink"
             >
-              <ChevronUp className="h-4 w-4" strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              aria-label={`Move ${SECTION_LABELS[s.type]} down`}
-              disabled={i === ordered.length - 1}
-              onClick={() => move(i, 1)}
-              className="rounded p-0.5 text-muted hover:text-ink disabled:opacity-30"
-            >
-              <ChevronDown className="h-4 w-4" strokeWidth={2} />
+              <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                aria-label={`Display name for ${SECTION_LABELS[s.type]}`}
-                value={s.label ?? ""}
-                placeholder={SECTION_LABELS[s.type]}
-                maxLength={CHAR_LIMITS.sectionLabel}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  onChange(
-                    sections.map((x) =>
-                      x.type === s.type ? { ...x, label: val ? val : undefined } : x,
-                    ),
-                  );
-                }}
-                className="w-full max-w-[200px] rounded-lg border border-line bg-bg/60 px-2.5 py-1 text-sm font-semibold text-ink placeholder:text-muted/60 transition-colors focus:border-accent focus:bg-surface focus:outline-none sm:max-w-[240px]"
-              />
-              {s.label && s.label.trim() !== SECTION_LABELS[s.type] && (
-                <span className="text-[11px] text-muted">({SECTION_LABELS[s.type]})</span>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              {[itemCount(s), s.visible ? "Shown" : "Hidden"].filter(Boolean).join(" · ")}
-            </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {SECTION_TEMPLATES.map((tmpl) => (
+              <button
+                key={tmpl.key}
+                type="button"
+                onClick={() => handleAddCustomSection(tmpl.key)}
+                className="flex flex-col justify-between rounded-xl border border-line bg-surface p-3.5 text-left transition-all hover:border-accent hover:shadow-sm"
+              >
+                <div>
+                  <span className="text-xs font-semibold text-ink">{tmpl.label}</span>
+                  <p className="mt-1 text-[11px] leading-snug text-muted">{tmpl.description}</p>
+                </div>
+                <div className="mt-3 flex items-center justify-between pt-2 border-t border-line/60">
+                  <span className="text-[10px] font-medium text-accent">Use template</span>
+                  <Plus className="h-3.5 w-3.5 text-accent" />
+                </div>
+              </button>
+            ))}
           </div>
-          <button
-            type="button"
-            aria-label={s.visible ? `Hide ${SECTION_LABELS[s.type]}` : `Show ${SECTION_LABELS[s.type]}`}
-            onClick={() =>
-              onChange(sections.map((x) => (x.type === s.type ? { ...x, visible: !x.visible } : x)))
-            }
-            className={`rounded-lg p-2 transition-colors duration-200 ${
-              s.visible ? "text-ink" : "text-muted/60"
-            } hover:bg-bg`}
-          >
-            {s.visible ? (
-              <Eye className="h-4.5 w-4.5" strokeWidth={2} />
-            ) : (
-              <EyeOff className="h-4.5 w-4.5" strokeWidth={2} />
-            )}
-          </button>
         </div>
-      ))}
+      )}
+
+      {ordered.map((s, i) => {
+        const itemKey = s.type === "custom" ? s.id : s.type;
+        const defaultLabel = s.type === "custom" ? s.label : SECTION_LABELS[s.type];
+
+        return (
+          <div
+            key={itemKey}
+            className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3"
+          >
+            <div className="flex flex-col">
+              <button
+                type="button"
+                aria-label={`Move ${s.label || defaultLabel} up`}
+                disabled={i === 0}
+                onClick={() => move(i, -1)}
+                className="rounded p-0.5 text-muted hover:text-ink disabled:opacity-30"
+              >
+                <ChevronUp className="h-4 w-4" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                aria-label={`Move ${s.label || defaultLabel} down`}
+                disabled={i === ordered.length - 1}
+                onClick={() => move(i, 1)}
+                className="rounded p-0.5 text-muted hover:text-ink disabled:opacity-30"
+              >
+                <ChevronDown className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  aria-label={`Display name for ${defaultLabel}`}
+                  value={s.label ?? ""}
+                  placeholder={defaultLabel}
+                  maxLength={CHAR_LIMITS.sectionLabel}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onChange(
+                      sections.map((x) =>
+                        isSameSection(x, s) ? { ...x, label: val ? val : undefined } : x,
+                      ),
+                    );
+                  }}
+                  className="w-full max-w-[200px] rounded-lg border border-line bg-bg/60 px-2.5 py-1 text-sm font-semibold text-ink placeholder:text-muted/60 transition-colors focus:border-accent focus:bg-surface focus:outline-none sm:max-w-[240px]"
+                />
+                {s.type === "custom" ? (
+                  <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent uppercase tracking-wider">
+                    {s.template}
+                  </span>
+                ) : (
+                  s.label &&
+                  s.label.trim() !== SECTION_LABELS[s.type] && (
+                    <span className="text-[11px] text-muted">({SECTION_LABELS[s.type]})</span>
+                  )
+                )}
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {[itemCount(s), s.visible ? "Shown" : "Hidden"].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+
+            {s.type === "custom" && (
+              <button
+                type="button"
+                onClick={() => onEditSection?.(`custom_${s.id}`)}
+                className="rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:bg-bg"
+              >
+                Edit Content
+              </button>
+            )}
+
+            <button
+              type="button"
+              aria-label={s.visible ? `Hide ${defaultLabel}` : `Show ${defaultLabel}`}
+              onClick={() =>
+                onChange(sections.map((x) => (isSameSection(x, s) ? { ...x, visible: !x.visible } : x)))
+              }
+              className={`rounded-lg p-2 transition-colors duration-200 ${
+                s.visible ? "text-ink" : "text-muted/60"
+              } hover:bg-bg`}
+            >
+              {s.visible ? (
+                <Eye className="h-4.5 w-4.5" strokeWidth={2} />
+              ) : (
+                <EyeOff className="h-4.5 w-4.5" strokeWidth={2} />
+              )}
+            </button>
+
+            {s.type === "custom" && (
+              <button
+                type="button"
+                onClick={() => handleDeleteCustomSection(s.id)}
+                title="Delete custom section"
+                className="rounded-lg p-2 text-muted transition-colors hover:text-danger hover:bg-bg"
+              >
+                <Trash2 className="h-4.5 w-4.5" strokeWidth={2} />
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -862,6 +1263,8 @@ export function SiteSettingsForm({
   const bannerCompanies = getBannerCompanies(content);
   const [newCompName, setNewCompName] = useState("");
   const [editingLogoCompany, setEditingLogoCompany] = useState<string | null>(null);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [tempName, setTempName] = useState("");
 
   function commit(patch: Partial<SiteSettings>) {
     const next: SiteSettings = { ...settings, ...patch };
@@ -948,6 +1351,38 @@ export function SiteSettingsForm({
     commit({
       companyOverrides: Object.keys(nextOverrides).length > 0 ? nextOverrides : undefined,
     });
+  }
+
+  function handleStartEditingName(c: BannerCompanyItem) {
+    setEditingNameId(c.id);
+    setTempName(c.name);
+  }
+
+  function handleSaveCompanyName(c: BannerCompanyItem) {
+    const trimmed = tempName.trim();
+    if (!trimmed) {
+      setEditingNameId(null);
+      return;
+    }
+    if (c.isCustom) {
+      commit({
+        customCompanies: (settings.customCompanies ?? []).map((comp) =>
+          comp.id === c.id || comp.name.toLowerCase() === c.name.toLowerCase()
+            ? { ...comp, name: trimmed }
+            : comp
+        ),
+      });
+    } else {
+      const origKey = (c.originalName || c.name).toLowerCase().trim();
+      const existing = settings.companyOverrides?.[origKey] ?? {};
+      commit({
+        companyOverrides: {
+          ...settings.companyOverrides,
+          [origKey]: { ...existing, displayName: trimmed },
+        },
+      });
+    }
+    setEditingNameId(null);
   }
 
   return (
@@ -1042,13 +1477,60 @@ export function SiteSettingsForm({
                           <span className="text-[10px] font-bold text-muted">{c.name.slice(0, 2).toUpperCase()}</span>
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-xs font-semibold text-ink">{c.name}</span>
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${c.isCustom ? "bg-accent/10 text-accent" : "bg-surface/80 text-muted border border-line"}`}>
-                            {c.isCustom ? "Custom" : "Experience"}
-                          </span>
-                        </div>
+                      <div className="min-w-0 flex-1">
+                        {editingNameId === c.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={tempName}
+                              onChange={(e) => setTempName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveCompanyName(c);
+                                if (e.key === "Escape") setEditingNameId(null);
+                              }}
+                              autoFocus
+                              className="rounded border border-accent bg-bg px-2 py-0.5 text-xs text-ink focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveCompanyName(c)}
+                              className="rounded bg-accent px-2 py-0.5 text-[10px] font-semibold text-white transition-opacity hover:opacity-90"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingNameId(null)}
+                              className="rounded border border-line px-2 py-0.5 text-[10px] text-muted hover:text-ink"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-xs font-semibold text-ink">{c.name}</span>
+                            {c.originalName && c.originalName !== c.name && (
+                              <span className="text-[10px] text-muted italic">({c.originalName})</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditingName(c)}
+                              title="Edit display name in banner"
+                              className="rounded p-0.5 text-muted transition-colors hover:text-accent"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                c.isCustom
+                                  ? "bg-accent/10 text-accent"
+                                  : "bg-surface/80 text-muted border border-line"
+                              }`}
+                            >
+                              {c.isCustom ? "Custom" : "Experience"}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1455,14 +1937,14 @@ export function SeoForm({
         </div>
       </section>
 
-      {/* GEO & Local Entity Knowledge Graph */}
+      {/* Knowledge Graph Location */}
       <section className="space-y-4 rounded-[16px] border border-line bg-surface/30 p-5">
         <div className="flex items-center gap-1.5">
           <MapPin className="h-4 w-4 text-accent" />
-          <h3 className="text-sm font-semibold text-ink">GEO Targeting & Knowledge Graph Address</h3>
+          <h3 className="text-sm font-semibold text-ink">Knowledge Graph Location (Worldwide Discoverable)</h3>
         </div>
         <p className="text-xs leading-relaxed text-muted">
-          Regional signals embedded directly into Schema.org Person, ICBM, and Dublin Core tags.
+          Adds structured geographic identity to Schema.org Person and Knowledge Graph. Your portfolio maintains 100% worldwide discoverability and is never restricted to this region.
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2">

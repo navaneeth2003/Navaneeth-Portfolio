@@ -14,7 +14,7 @@ export function StatsSection({ items }: { items: StatItem[] }) {
   return (
     <section
       id="stats"
-      className="relative scroll-mt-24 bg-transparent px-5 py-10 sm:px-6 md:px-12 md:py-16"
+      className="relative scroll-mt-24 px-5 py-10 sm:px-6 md:px-12 md:py-16 bg-gradient-to-b from-[var(--color-bg)] via-[var(--color-bg)] to-transparent"
     >
       <GridLines />
       <h2 className="sr-only">Stats</h2>

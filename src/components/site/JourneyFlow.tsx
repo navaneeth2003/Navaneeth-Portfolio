@@ -232,60 +232,50 @@ function journeyPath(l: Layout, mobile: boolean): string {
   const last = stops[stops.length - 1];
   const endsAtHeading = stops.length > 1 && last.id === "tools";
   const cx = W / 2;
-  const amp = W * (mobile ? 0.44 : 0.36);
-  const halfWave = mobile ? Math.max(W * 1.8, 520) : Math.max(W * 0.65, 500);
+
+  // On mobile devices: do NOT squeeze the wave into a narrow strip or force sharp angles.
+  // Allow a wide, natural amplitude that flows gracefully across the screen,
+  // drifting slightly off-screen and re-entering as a continuous harmonic sine wave.
+  const amp = mobile ? Math.max(W * 0.54, 230) : Math.min(W * 0.36, 480);
+  const halfWave = mobile ? 520 : 600;
   const local = (abs: number) => abs - l.top;
   const headH = (s: Stop) => s.headBottom - s.headTop;
 
-  // Starts strictly below the Experience title, originating from outside the screen on the left
-  const entryY = local(first.headBottom) + (mobile ? 18 : 26);
-  const entry: Pt = { x: -Math.max(W * 0.08, 64), y: entryY };
+  // Starts below Experience title, originating outside the screen on the left
+  const entryY = local(first.headBottom) + (mobile ? 20 : 28);
+  const entry: Pt = { x: -Math.max(W * 0.12, 72), y: entryY };
 
   const exit: Pt = endsAtHeading
-    ? { x: W + Math.max(W * 0.08, 64), y: local(last.headBottom) + headH(last) * 0.25 }
-    : { x: W + Math.max(W * 0.08, 64), y: local(last.bottom) - (mobile ? 48 : 96) };
+    ? { x: W + Math.max(W * 0.12, 72), y: local(last.headBottom) + headH(last) * 0.25 }
+    : { x: W + Math.max(W * 0.12, 72), y: local(last.bottom) - (mobile ? 48 : 96) };
 
-  const waveTop = entryY + (mobile ? 44 : 64);
   const waveBottom = endsAtHeading
-    ? local(last.headTop) - headH(last) * 0.5
-    : exit.y - halfWave * 0.45;
+    ? local(last.headTop) - headH(last) * 0.4
+    : exit.y - 120;
 
+  const totalHeight = Math.max(0, waveBottom - entryY);
   const pts: Pt[] = [entry];
-  if (waveBottom - waveTop >= 160) {
-    const cuts = new Set<number>([waveTop, waveBottom]);
-    for (const s of stops) {
-      for (const y of [local(s.top), local(s.bottom)]) {
-        if (y > waveTop && y < waveBottom) cuts.add(y);
-      }
-    }
-    const ys = [...cuts].sort((a, b) => a - b);
-    const segs = ys.slice(1).map((b, i) => {
-      const a = ys[i];
-      const mid = (a + b) / 2;
-      const s = stops.find((t) => local(t.top) <= mid && mid < local(t.bottom));
-      return { a, b, w: (b - a) * (s ? (DENSITY[s.id] ?? 1) : 1) };
-    });
-    const total = segs.reduce((n, s) => n + s.w, 0);
-    const yAt = (t: number): number => {
-      let acc = 0;
-      for (const s of segs) {
-        if (t <= acc + s.w) return s.a + (s.b - s.a) * (s.w ? (t - acc) / s.w : 0);
-        acc += s.w;
-      }
-      return waveBottom;
-    };
-    const n = 2 * Math.max(1, Math.round(total / (2 * halfWave)));
-    const seg = total / n;
-    const firstT = seg * 0.35;
-    const step = (total - 2 * firstT) / (n - 1);
+
+  if (totalHeight >= 320) {
+    const n = Math.max(2, Math.round(totalHeight / halfWave));
+    const stepY = totalHeight / n;
+
+    // Alternating wave turns (extrema with vertical tangents).
+    // Because the line enters from the left (x < 0), the first crest is on the right (cx + amp),
+    // smoothly reached over a full vertical step (stepY) with zero sharp turns or kinks.
     for (let i = 0; i < n; i++) {
-      pts.push({ x: i % 2 === 0 ? cx + amp : cx - amp, y: yAt(firstT + i * step) });
+      const isRightTurn = i % 2 === 0;
+      const turnX = isRightTurn ? cx + amp : cx - amp;
+      const turnY = entryY + (i + 1) * stepY;
+      pts.push({ x: turnX, y: turnY });
     }
   }
+
   pts.push(exit);
 
   const lastIndex = pts.length - 1;
   let d = `M ${fmt(entry.x)} ${fmt(entry.y)}`;
+
   for (let i = 0; i < lastIndex; i++) {
     const p0 = pts[i];
     const p1 = pts[i + 1];
@@ -296,38 +286,40 @@ function journeyPath(l: Layout, mobile: boolean): string {
     let cp1: Pt;
 
     if (i === 0) {
-      // Smooth organic entrance: broad circular rounded sweep coming gently into the page
+      // Harmonic entrance: broad, gentle diagonal sweep from outside the screen
+      // that curves smoothly into the vertical tangent of the first wave turn.
       cp0 = {
-        x: p0.x + dx * 0.45,
-        y: p0.y + dy * 0.08,
+        x: p0.x + dx * 0.38,
+        y: p0.y + dy * 0.28,
       };
       cp1 = {
-        x: p1.x - dx * 0.12,
-        y: p1.y - dy * 0.42,
+        x: p1.x,
+        y: p1.y - dy * 0.3642,
       };
     } else if (i + 1 === lastIndex) {
-      // Smooth organic exit: curves gracefully out off-screen
+      // Harmonic exit: curves gracefully out off-screen to the right
       cp0 = {
         x: p0.x,
-        y: p0.y + dy * 0.36,
+        y: p0.y + dy * 0.3642,
       };
       cp1 = {
         x: p1.x - Math.max(Math.abs(dx) * 0.36, 48),
-        y: p1.y - dy * 0.12,
+        y: p1.y - dy * 0.16,
       };
     } else {
       // Harmonic sinusoidal curve between alternating turns (C1 smooth, natural flow)
       cp0 = {
         x: p0.x,
-        y: p0.y + dy * 0.36,
+        y: p0.y + dy * 0.3642,
       };
       cp1 = {
         x: p1.x,
-        y: p1.y - dy * 0.36,
+        y: p1.y - dy * 0.3642,
       };
     }
 
     d += ` C ${fmt(cp0.x)} ${fmt(cp0.y)}, ${fmt(cp1.x)} ${fmt(cp1.y)}, ${fmt(p1.x)} ${fmt(p1.y)}`;
   }
+
   return d;
 }

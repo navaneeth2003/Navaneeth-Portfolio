@@ -104,6 +104,37 @@ export type EducationItem = {
   endYear: string;
 };
 
+export type CustomSectionTemplate =
+  | "story"
+  | "media-text"
+  | "grid"
+  | "metrics"
+  | "quote"
+  | "cta";
+
+export type CustomSectionItem = {
+  id: string;
+  title?: string;
+  subtitle?: string;
+  body?: string;
+  image?: ImageRef;
+  linkText?: string;
+  linkUrl?: string;
+  highlight?: string;
+};
+
+export type CustomSectionData = {
+  id: string;
+  template: CustomSectionTemplate;
+  heading: string;
+  subheading?: string;
+  body?: string;
+  image?: ImageRef;
+  ctaText?: string;
+  ctaUrl?: string;
+  items?: CustomSectionItem[];
+};
+
 export type Section =
   | { type: "about"; visible: boolean; order: number; label?: string; data: About }
   | { type: "stats"; visible: boolean; order: number; label?: string; items: StatItem[] }
@@ -112,7 +143,16 @@ export type Section =
   | { type: "tools"; visible: boolean; order: number; label?: string; items: ToolItem[] }
   | { type: "skills"; visible: boolean; order: number; label?: string; items: SkillGroup[] }
   | { type: "certifications"; visible: boolean; order: number; label?: string; items: CertificationItem[] }
-  | { type: "education"; visible: boolean; order: number; label?: string; items: EducationItem[] };
+  | { type: "education"; visible: boolean; order: number; label?: string; items: EducationItem[] }
+  | {
+      type: "custom";
+      id: string;
+      template: CustomSectionTemplate;
+      visible: boolean;
+      order: number;
+      label?: string;
+      data: CustomSectionData;
+    };
 
 export type SectionType = Section["type"];
 
@@ -149,6 +189,7 @@ export type CustomCompany = {
 };
 
 export type CompanyLogoOverride = {
+  displayName?: string;
   showLogo?: boolean;
   customLogo?: ImageRef;
 };
@@ -180,6 +221,7 @@ export type HistoryEntry = {
   version: number;
   publishedAt: string;
   content: SiteContent;
+  label?: string;
 };
 
 export type SiteDocument = {
@@ -199,6 +241,7 @@ export const SECTION_LABELS: Record<SectionType, string> = {
   skills: "Skills",
   certifications: "Certifications",
   education: "Education",
+  custom: "Custom Section",
 };
 
 /** Get the effective display label of a section, falling back to default label. */
@@ -210,6 +253,11 @@ export function getSectionLabel(section: { type: SectionType; label?: string }):
 export function sectionIsEmpty(section: Section): boolean {
   if (section.type === "about") {
     return !section.data.heading.trim() && !section.data.body.trim();
+  }
+  if (section.type === "custom") {
+    const d = section.data;
+    const hasItems = Array.isArray(d.items) && d.items.length > 0;
+    return !d.heading?.trim() && !d.body?.trim() && !hasItems;
   }
   return section.items.length === 0;
 }

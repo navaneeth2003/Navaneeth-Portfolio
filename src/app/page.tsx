@@ -33,22 +33,24 @@ export async function generateMetadata(): Promise<Metadata> {
       url: seo.canonicalUrl,
       siteName: `${content.hero.name} Portfolio`,
       locale: "en_US",
-      type: "profile",
+      type: "website",
       ...(seo.ogImageUrl
         ? {
             images: [
               {
                 url: seo.ogImageUrl,
+                secureUrl: seo.ogImageUrl,
                 width: 1200,
                 height: 630,
                 alt: seo.title,
+                type: "image/jpeg",
               },
             ],
           }
         : {}),
     },
     twitter: {
-      card: seo.ogImageUrl ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: seo.title,
       description: seo.description,
       creator: seo.twitterHandle,
@@ -95,8 +97,22 @@ function jsonForScript(value: unknown): string {
   );
 }
 
-export default async function HomePage() {
-  const { content } = await getPublishedSite();
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ palette?: string }>;
+} = {}) {
+  const params = await searchParams;
+  const { content: baseContent } = await getPublishedSite();
+  const content = params?.palette
+    ? {
+        ...baseContent,
+        settings: {
+          ...baseContent.settings,
+          palette: params.palette,
+        },
+      }
+    : baseContent;
   const seo = getEffectiveSeo(content);
   const jsonLd = generateJsonLdGraph(content);
 

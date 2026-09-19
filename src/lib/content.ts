@@ -146,3 +146,38 @@ export async function restoreVersion(entry: HistoryEntry): Promise<SiteDocument>
     history: next.history,
   };
 }
+
+/**
+ * Update the user-editable name/label of a historical version without modifying its snapshot content.
+ */
+export async function updateHistoryEntryLabel(version: number, label: string): Promise<HistoryEntry[]> {
+  const row = await fetchRow();
+  if (!row) throw new Error("No site document found.");
+  const currentHistory: HistoryEntry[] = row.history ?? [];
+  const updatedHistory = currentHistory.map((h) =>
+    h.version === version ? { ...h, label: label.trim() || undefined } : h
+  );
+  const { error } = await getSupabase()
+    .from("site")
+    .update({ history: clean(updatedHistory) })
+    .eq("id", SITE_ID);
+  if (error) throw error;
+  return updatedHistory;
+}
+
+/**
+ * Delete a specific historical entry from version history.
+ * Safety: only deletes the historical entry record; draft and published remain 100% untouched.
+ */
+export async function deleteHistoryEntry(version: number): Promise<HistoryEntry[]> {
+  const row = await fetchRow();
+  if (!row) throw new Error("No site document found.");
+  const currentHistory: HistoryEntry[] = row.history ?? [];
+  const updatedHistory = currentHistory.filter((h) => h.version !== version);
+  const { error } = await getSupabase()
+    .from("site")
+    .update({ history: clean(updatedHistory) })
+    .eq("id", SITE_ID);
+  if (error) throw error;
+  return updatedHistory;
+}
