@@ -184,6 +184,14 @@ body {
   border-radius: 6px;
 }
 
+/* Scale down the top navbar by 15% exclusively on Small laptop (1280x800) screens */
+@media (min-width: 1250px) and (max-width: 1439px) {
+  .nav-small-laptop-scale {
+    transform: scale(0.85);
+    transform-origin: top center;
+  }
+}
+
 /* grain */
 .noise::before {
   content: "";

@@ -98,7 +98,7 @@ export function Navbar({
           // Matched to reference screenshot: warm translucent glass,
           // constant opacity (no scroll darkening), heavy blur + saturation
           // scaled gracefully on laptop and monitor screens for a fuller presence
-          className="flex w-full max-w-[1060px] xl:max-w-[1180px] 2xl:max-w-[1280px] items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-[rgb(22_11_9/0.44)] py-[7px] lg:py-[8px] xl:py-[10px] pl-[7px] lg:pl-[9px] xl:pl-[11px] pr-[7px] lg:pr-[9px] xl:pr-[11px] shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)] backdrop-blur-[18px] backdrop-saturate-[1.4]"
+          className="nav-small-laptop-scale flex w-full max-w-[1060px] xl:max-w-[1180px] 2xl:max-w-[1280px] items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-[rgb(22_11_9/0.44)] py-[7px] lg:py-[8px] xl:py-[10px] pl-[7px] lg:pl-[9px] xl:pl-[11px] pr-[7px] lg:pr-[9px] xl:pr-[11px] shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)] backdrop-blur-[18px] backdrop-saturate-[1.4]"
         >
           <div className="hidden flex-1 items-center justify-center gap-1 lg:gap-2 md:flex">
             {links.map((l) => {
