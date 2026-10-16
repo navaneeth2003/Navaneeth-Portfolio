@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Home, Mail } from "lucide-react";
+import { Home, Mail } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -51,7 +51,7 @@ export default function NotFound() {
           </h1>
 
           <p className="mt-3 text-sm leading-relaxed text-[#a1a1aa] sm:text-base">
-            The page you are looking for doesn't exist, has been removed, or the link may be broken.
+            The page you are looking for doesn&apos;t exist, has been removed, or the link may be broken.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

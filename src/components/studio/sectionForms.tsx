@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { CHAR_LIMITS, ITEM_LIMITS } from "@/lib/limits";
-import { experienceCompanies, marqueeIsCustom, marqueeNames, getBannerCompanies, type BannerCompanyItem } from "@/lib/marquee";
+import { getBannerCompanies, type BannerCompanyItem } from "@/lib/marquee";
 import { COLOR_PALETTES } from "@/lib/palettes";
 import type {
   About,
   CertificationItem,
-  CompanyLogoOverride,
   ContactInfo,
   CustomCompany,
   CustomSectionData,
@@ -31,7 +30,6 @@ import {
   BarChart3,
   Building2,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Eye,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { HistoryEntry } from "@/lib/types";
-import { Check, Eye, History, Pencil, RotateCcw, Trash2, X } from "lucide-react";
+import { Eye, History, Pencil, RotateCcw, Trash2 } from "lucide-react";
 
 export function formatWhen(iso: string): string {
   try {

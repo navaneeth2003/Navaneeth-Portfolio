@@ -36,17 +36,17 @@ function LaptopMock({
           />
           {/* Subtle bottom gradient behind the title — only over the lower half, never darkening the whole image */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-black/95 via-black/55 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 z-10 p-3.5 sm:p-4 md:p-5">
-            <p className="line-clamp-2 font-heading text-[15px] font-bold leading-snug tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] sm:text-[17px] md:text-[18px]">
+          <div className="absolute inset-x-0 bottom-0 z-10 p-3 sm:p-3.5 md:p-4">
+            <p className="line-clamp-2 font-heading text-[14px] font-bold leading-snug tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] sm:text-[15px] md:text-[16px] xl:text-[17px]">
               {p.title}
             </p>
           </div>
         </>
       ) : (
         /* no cover yet — text mock screen */
-        <div className="flex h-full w-full flex-col justify-end bg-[radial-gradient(120%_90%_at_20%_0%,rgba(255,74,26,0.28),transparent_60%),linear-gradient(160deg,#1a1a1f,#0b0b0e)] p-5 transition-transform duration-700 ease-out group-hover:scale-[1.04] sm:p-6 lg:p-7">
-          <p className="font-heading text-[11px] uppercase tracking-[0.18em] text-white/45">{p.vertical}</p>
-          <p className="mt-2 line-clamp-3 font-heading text-[clamp(18px,3.4vw,26px)] font-semibold leading-[1.15] text-white/90 md:text-[21px] lg:text-[26px]">
+        <div className="flex h-full w-full flex-col justify-end bg-[radial-gradient(120%_90%_at_20%_0%,rgba(255,74,26,0.28),transparent_60%),linear-gradient(160deg,#1a1a1f,#0b0b0e)] p-4 sm:p-5 lg:p-6 transition-transform duration-700 ease-out group-hover:scale-[1.04]">
+          <p className="font-heading text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-white/45">{p.vertical}</p>
+          <p className="mt-1.5 sm:mt-2 line-clamp-3 font-heading text-[clamp(16px,2.8vw,22px)] font-semibold leading-[1.18] text-white/90 md:text-[19px] lg:text-[22px]">
             {p.title}
           </p>
         </div>
@@ -58,7 +58,7 @@ function LaptopMock({
 
   return (
     <div
-      className="relative overflow-hidden bg-[#0c0c0e] px-4 pt-6 sm:px-5 sm:pt-8 md:px-6 md:pt-8 lg:px-10 lg:pt-10"
+      className="relative overflow-hidden bg-[#0c0c0e] px-4 pt-5 sm:px-5 sm:pt-6 md:px-5 md:pt-6 lg:px-6 lg:pt-7 xl:px-7 xl:pt-8"
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}
     >
@@ -103,8 +103,8 @@ function ProjectCard({
   const inView = useInView(ref, { once: true, margin: "-80px" });
   const r = useReveal();
   const mobile = useIsMobile();
-  const row = Math.floor(index / 2);
-  const delay = mobile ? 0 : (index % 2) * 0.12 + row * 0.06;
+  const row = Math.floor(index / 3);
+  const delay = mobile ? 0 : (index % 3) * 0.08 + (row % 3) * 0.05;
   const hidden = { opacity: 0, y: r.yBody + 16, scale: 0.96, filter: mobile ? "blur(6px)" : "blur(8px)" };
 
   // Action links
@@ -294,6 +294,39 @@ export function Projects({
 }) {
   const ref = useRef<HTMLElement>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  // Derive categories order: predefined + configured custom + any present in items
+  const baseCategories = categories && categories.length > 0 ? categories : (PROJECT_VERTICALS as readonly string[]);
+  const allCategoryNames = Array.from(new Set([...baseCategories, ...items.map((p) => p.vertical)]));
+
+  // Non-empty verticals in order, with continuous index stagger
+  const groups = allCategoryNames
+    .map((v) => ({
+      vertical: v as ProjectVertical,
+      items: items.filter((p) => p.vertical === v),
+    }))
+    .filter((g) => g.items.length > 0)
+    .reduce<{ vertical: ProjectVertical; items: ProjectItem[]; start: number }[]>((acc, g) => {
+      const prev = acc[acc.length - 1];
+      const start = prev ? prev.start + prev.items.length : 0;
+      return [...acc, { ...g, start }];
+    }, []);
+
+  const toggleSectionExpand = (vertical: string) => {
+    setExpandedSections((prev) => {
+      const isExpanding = !prev[vertical];
+      if (!isExpanding && expandedId) {
+        // If collapsing, check if the currently expanded project card is in the hidden portion (beyond first 3)
+        const group = groups.find((g) => g.vertical === vertical);
+        const isHidden = group?.items.slice(3).some((p) => p.id === expandedId);
+        if (isHidden) {
+          setExpandedId(null);
+        }
+      }
+      return { ...prev, [vertical]: isExpanding };
+    });
+  };
 
   const { scrollYProgress } = useScroll({
     target: ref as never,
@@ -320,23 +353,6 @@ export function Projects({
     };
   }, [expandedId]);
 
-  // Derive categories order: predefined + configured custom + any present in items
-  const baseCategories = categories && categories.length > 0 ? categories : (PROJECT_VERTICALS as readonly string[]);
-  const allCategoryNames = Array.from(new Set([...baseCategories, ...items.map((p) => p.vertical)]));
-
-  // Non-empty verticals in order, with continuous index stagger
-  const groups = allCategoryNames
-    .map((v) => ({
-      vertical: v as ProjectVertical,
-      items: items.filter((p) => p.vertical === v),
-    }))
-    .filter((g) => g.items.length > 0)
-    .reduce<{ vertical: ProjectVertical; items: ProjectItem[]; start: number }[]>((acc, g) => {
-      const prev = acc[acc.length - 1];
-      const start = prev ? prev.start + prev.items.length : 0;
-      return [...acc, { ...g, start }];
-    }, []);
-
   const sectionHeading = title?.trim() || "Projects";
 
   return (
@@ -360,8 +376,13 @@ export function Projects({
         {sectionHeading}
       </motion.span>
 
-      <div className="relative z-[2] mx-auto max-w-[1160px] pt-[13vw] md:pt-[7.5vw]">
+      <div className="relative z-[2] mx-auto max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px] pt-[13vw] md:pt-[7.5vw]">
         {groups.map((g, gi) => {
+          const isSectionExpanded = expandedSections[g.vertical] ?? false;
+          const hasMore = g.items.length > 3;
+          const visibleItems = isSectionExpanded ? g.items : g.items.slice(0, 3);
+          const remainingCount = g.items.length - 3;
+
           return (
             <div key={g.vertical} className={gi > 0 ? "mt-14 md:mt-20" : ""}>
               <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-white/15 pb-4 md:mb-6">
@@ -375,8 +396,8 @@ export function Projects({
                   {g.items.length} {g.items.length === 1 ? "project" : "projects"}
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-                {g.items.map((p, i) => (
+              <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 lg:grid-cols-3 md:gap-6">
+                {visibleItems.map((p, i) => (
                   <ProjectCard
                     key={p.id}
                     p={p}
@@ -386,6 +407,47 @@ export function Projects({
                   />
                 ))}
               </div>
+
+              {hasMore && (
+                <div className="mt-8 flex justify-center sm:mt-10">
+                  <button
+                    type="button"
+                    onClick={() => toggleSectionExpand(g.vertical)}
+                    aria-expanded={isSectionExpanded}
+                    aria-label={
+                      isSectionExpanded
+                        ? `Show fewer projects in ${g.vertical}`
+                        : `View ${remainingCount} more projects in ${g.vertical}`
+                    }
+                    className="group relative inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.04] px-5 py-2.5 font-heading text-[13px] font-medium text-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl backdrop-saturate-[1.5] transition-all duration-300 hover:border-white/30 hover:bg-white/[0.08] hover:text-white hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-6 sm:py-3 sm:text-[14px]"
+                  >
+                    {/* Subtle top hairline highlight */}
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    />
+                    <span>{isSectionExpanded ? "Show less" : "View more"}</span>
+                    {!isSectionExpanded && (
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white/70">
+                        +{remainingCount}
+                      </span>
+                    )}
+                    {isSectionExpanded ? (
+                      <ChevronUp
+                        size={15}
+                        className="text-white/60 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:text-white"
+                        aria-hidden
+                      />
+                    ) : (
+                      <ChevronDown
+                        size={15}
+                        className="text-white/60 transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-white"
+                        aria-hidden
+                      />
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

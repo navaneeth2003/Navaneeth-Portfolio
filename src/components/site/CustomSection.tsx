@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowUpRight, CheckCircle2, Sparkles, Quote as QuoteIcon } from "lucide-react";
-import type { CustomSectionData, CustomSectionTemplate } from "@/lib/types";
+import { ArrowUpRight, Quote as QuoteIcon } from "lucide-react";
+import type { CustomSectionData } from "@/lib/types";
 import { ButtonIcon, GridLines, MagneticButton, ScrollReveal } from "@/components/ui";
 import { GhostTitle } from "./GhostTitle";
 

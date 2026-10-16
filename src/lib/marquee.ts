@@ -1,4 +1,4 @@
-import type { CustomCompany, ImageRef, SiteContent } from "./types";
+import type { ImageRef, SiteContent } from "./types";
 import { renderableSections } from "./types";
 
 /** Companies from the visible Experience section, first occurrence wins. */

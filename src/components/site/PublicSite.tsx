@@ -1,6 +1,6 @@
 import type { Section, SectionType, SiteContent } from "@/lib/types";
 import { renderableSections, SECTION_LABELS } from "@/lib/types";
-import { getBannerStripItems, marqueeLogo, marqueeNames } from "@/lib/marquee";
+import { getBannerStripItems } from "@/lib/marquee";
 import { sanitizeContent } from "@/lib/urls";
 import { Navbar, type NavCta, type NavLink } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
