@@ -9,7 +9,10 @@ import {
   updateHistoryEntryLabel,
 } from "@/lib/content";
 import { getSupabase, isOwnerEmail, OWNER_EMAILS, supabaseEnabled } from "@/lib/supabase";
-import type { HistoryEntry, Section, SectionType, SiteContent } from "@/lib/types";
+import { SEED_CONTENT } from "@/lib/seed";
+import { CAST } from "@/lib/chatter";
+import { getTheme } from "@/lib/palettes";
+import type { HistoryEntry, Section, SectionType, SiteContent, SiteSettings } from "@/lib/types";
 import { SECTION_LABELS } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -27,15 +30,21 @@ import {
   Layers,
   LogOut,
   Mail,
+  MessageCircle,
+  Palette,
+  PenTool,
   Search,
   Settings,
   Sparkles,
   User as UserIcon,
   Wrench,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HistoryView, formatWhen } from "./HistoryView";
 import { Preview } from "./Preview";
+import { ThemePicker } from "./ThemePicker";
+import { ChatterForm } from "./ChatterForm";
+import { AvatarTile, Bubble } from "@/components/site/kit";
 import {
   AboutForm,
   CertificationsForm,
@@ -62,12 +71,16 @@ type Screen =
   | "contact"
   | "site"
   | "seo"
+  | "theme"
+  | "chatter"
   | SectionType
   | (string & {});
 
 const NAV: { key: Screen; label: string; Icon: typeof Home }[] = [
   { key: "overview", label: "Overview", Icon: Home },
   { key: "sections", label: "Sections", Icon: Layers },
+  { key: "theme", label: "Theme", Icon: Palette },
+  { key: "chatter", label: "Team chatter", Icon: MessageCircle },
   { key: "hero", label: "Hero", Icon: UserIcon },
   { key: "about", label: "About", Icon: FileText },
   { key: "stats", label: "Stats", Icon: BarChart3 },
@@ -93,36 +106,75 @@ const SCREEN_TITLES: Record<Screen, string> = {
   contact: "Contact",
   site: "Site settings",
   seo: "SEO & Reach",
+  theme: "Theme",
+  chatter: "Team chatter",
   ...SECTION_LABELS,
 };
 
 function Splash({ children }: { children: React.ReactNode }) {
   return (
-    <div className="theme-studio flex min-h-screen items-center justify-center bg-bg px-5 text-ink">
-      <div className="card w-full max-w-md p-8 text-center">{children}</div>
+    <div className="theme-studio flex min-h-screen items-center justify-center bg-bg px-5 py-16 text-ink">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 top-0 h-[60vh]"
+        style={{ background: "radial-gradient(80% 70% at 50% -10%, rgba(247, 224, 150, 0.9), rgba(247, 224, 150, 0) 70%)" }}
+      />
+      <div className="relative w-full max-w-md">
+        {/* the team, perched on the card */}
+        <div aria-hidden className="relative z-10 -mb-5 flex items-end justify-center">
+          <AvatarTile src={CAST.iris.src} tone={CAST.iris.tone} tilt={-9} border="border-[3px]" className="size-14" />
+          <AvatarTile src={CAST.owner.src} tone={CAST.owner.tone} tilt={3} border="border-4" className="z-10 -mx-2 size-[68px]">
+            <Bubble className="-top-8 left-1/2 -translate-x-1/2">Welcome back 👋</Bubble>
+          </AvatarTile>
+          <AvatarTile src={CAST.gus.src} tone={CAST.gus.tone} tilt={9} border="border-[3px]" className="size-14" />
+        </div>
+        <div className="card relative px-8 pb-8 pt-10 text-center">{children}</div>
+      </div>
     </div>
   );
 }
 
+/** The studio's mark: a pen nib on an ink squircle — where the site gets written. */
 function BrandMark() {
   return (
-    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-base font-bold text-white">
-      N<span className="text-accent">.</span>
+    <span
+      aria-hidden
+      className="grid size-10 shrink-0 -rotate-6 place-items-center rounded-[30%] bg-ink text-[#f5c542] shadow-[0_8px_16px_-8px_rgba(18,18,17,0.55)] transition-transform duration-300 group-hover:rotate-0"
+    >
+      <PenTool className="size-[18px]" strokeWidth={2.2} />
     </span>
   );
 }
 
-export function StudioApp() {
-  const [user, setUser] = useState<User | null | undefined>(undefined);
+const DEMO_PUBLISHED_AT = "2026-01-01T09:00:00.000Z";
+
+/** False during server rendering and hydration, true once running in the browser. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
+/**
+ * The content studio. `demo` (dev-only route /studio/demo) opens the real
+ * studio on the built-in content with no backend: nothing is saved or
+ * published — it exists so the studio can be designed and checked locally.
+ */
+export function StudioApp({ demo = false }: { demo?: boolean } = {}) {
+  const [user, setUser] = useState<User | null | undefined>(demo ? ({ email: "demo@studio.local" } as User) : undefined);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState("");
   const [authCode, setAuthCode] = useState("");
   const [authStep, setAuthStep] = useState<"email" | "code">("email");
   const [authBusy, setAuthBusy] = useState(false);
 
-  const [draft, setDraft] = useState<SiteContent | null>(null);
-  const [published, setPublished] = useState<SiteContent | null>(null);
-  const [meta, setMeta] = useState<{ version: number; publishedAt: string } | null>(null);
+  const [draft, setDraft] = useState<SiteContent | null>(demo ? SEED_CONTENT : null);
+  const [published, setPublished] = useState<SiteContent | null>(demo ? SEED_CONTENT : null);
+  const [meta, setMeta] = useState<{ version: number; publishedAt: string } | null>(
+    demo ? { version: 1, publishedAt: DEMO_PUBLISHED_AT } : null,
+  );
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historicalPreview, setHistoricalPreview] = useState<HistoryEntry | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -137,7 +189,10 @@ export function StudioApp() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const enabled = supabaseEnabled();
-  const authorized = OWNER_EMAILS.length > 0 && isOwnerEmail(user?.email);
+  const authorized = demo || (OWNER_EMAILS.length > 0 && isOwnerEmail(user?.email));
+  // The real studio only renders its dashboard after a client-side sign-in;
+  // the demo waits for the browser too, so greetings and dates use local time.
+  const hydrated = useHydrated();
 
   function showToast(msg: string) {
     setToast(msg);
@@ -146,17 +201,17 @@ export function StudioApp() {
   }
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || demo) return;
     const sb = getSupabase();
     sb.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) =>
       setUser(session?.user ?? null),
     );
     return () => sub.subscription.unsubscribe();
-  }, [enabled]);
+  }, [enabled, demo]);
 
   useEffect(() => {
-    if (!authorized) return;
+    if (!authorized || demo) return;
     let cancelled = false;
     (async () => {
       try {
@@ -174,11 +229,11 @@ export function StudioApp() {
     return () => {
       cancelled = true;
     };
-  }, [authorized]);
+  }, [authorized, demo]);
 
   // Autosave — every edit lands in `draft` shortly after typing stops.
   useEffect(() => {
-    if (!draft) return;
+    if (!draft || demo) return;
     if (skipNextSave.current) {
       skipNextSave.current = false;
       return;
@@ -193,7 +248,7 @@ export function StudioApp() {
       }
     }, 800);
     return () => clearTimeout(t);
-  }, [draft]);
+  }, [draft, demo]);
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -241,6 +296,11 @@ export function StudioApp() {
 
   async function handlePublish() {
     if (!draft || !meta || busy) return;
+    if (demo) {
+      setPublished(draft);
+      showToast("Demo mode — nothing was saved or published.");
+      return;
+    }
     setBusy(true);
     try {
       const prev = meta;
@@ -317,6 +377,16 @@ export function StudioApp() {
     }
   }
 
+  /** Merge into settings, dropping keys that went back to "use the default". */
+  function patchSettings(patch: Partial<SiteSettings>) {
+    setDraft((d) => {
+      if (!d) return d;
+      const next = { ...(d.settings ?? {}), ...patch } as Record<string, unknown>;
+      for (const k of Object.keys(next)) if (next[k] === undefined) delete next[k];
+      return { ...d, settings: Object.keys(next).length ? (next as SiteSettings) : undefined };
+    });
+  }
+
   function section<T extends SectionType>(type: T): Extract<Section, { type: T }> | undefined {
     return draft?.sections.find((s): s is Extract<Section, { type: T }> => s.type === type);
   }
@@ -331,11 +401,11 @@ export function StudioApp() {
 
   // ---- Render branches ----
 
-  if (!enabled) {
+  if (!enabled && !demo) {
     return (
       <Splash>
         <BrandMark />
-        <h1 className="mt-4 text-xl font-semibold">Connect Supabase to open the studio</h1>
+        <h1 className="mt-4 text-[22px] font-extrabold tracking-[-0.03em]">Connect Supabase to open the studio</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           Fill in <code className="rounded bg-bg px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
           <code className="rounded bg-bg px-1.5 py-0.5">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in{" "}
@@ -348,7 +418,7 @@ export function StudioApp() {
     );
   }
 
-  if (user === undefined) {
+  if (user === undefined || (demo && !hydrated)) {
     return (
       <Splash>
         <p className="text-sm text-muted">Opening the studio…</p>
@@ -362,14 +432,14 @@ export function StudioApp() {
         <div className="flex justify-center">
           <BrandMark />
         </div>
-        <h1 className="mt-4 text-xl font-semibold">This studio is private</h1>
+        <h1 className="mt-4 text-[22px] font-extrabold tracking-[-0.03em]">This studio is private</h1>
         <p className="mt-2 text-sm text-muted">
           {user.email ?? "That account"} doesn&apos;t have access.
         </p>
         <button
           type="button"
           onClick={() => getSupabase().auth.signOut()}
-          className="mt-6 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85"
+          className="mt-6 w-full rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90"
         >
           Sign out
         </button>
@@ -383,7 +453,7 @@ export function StudioApp() {
         <div className="flex justify-center">
           <BrandMark />
         </div>
-        <h1 className="mt-4 text-xl font-semibold">Content studio</h1>
+        <h1 className="mt-4 text-[26px] font-extrabold tracking-[-0.04em]">Content studio</h1>
         <p className="mt-1 text-xs text-muted">Private — for the site owner only.</p>
         {authStep === "email" ? (
           <form onSubmit={handleSendCode}>
@@ -397,12 +467,12 @@ export function StudioApp() {
               value={authEmail}
               onChange={(e) => setAuthEmail(e.target.value)}
               placeholder="you@example.com"
-              className="mt-6 w-full rounded-[12px] border border-line bg-surface px-3.5 py-2.5 text-sm transition-colors duration-200 focus:border-accent focus:outline-none"
+              className="mt-6 w-full rounded-full border border-line bg-surface px-4 py-3 text-[15px] transition-colors duration-200 focus:border-ink focus:outline-none"
             />
             <button
               type="submit"
               disabled={authBusy}
-              className="mt-3 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
+              className="mt-3 w-full rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-50"
             >
               {authBusy ? "Sending…" : "Email me a sign-in link"}
             </button>
@@ -419,12 +489,12 @@ export function StudioApp() {
               value={authCode}
               onChange={(e) => setAuthCode(e.target.value)}
               placeholder="123456"
-              className="mt-6 w-full rounded-[12px] border border-line bg-surface px-3.5 py-2.5 text-center text-lg tracking-[0.3em] transition-colors duration-200 focus:border-accent focus:outline-none"
+              className="mt-6 w-full rounded-full border border-line bg-surface px-4 py-3 text-center text-lg tracking-[0.3em] transition-colors duration-200 focus:border-ink focus:outline-none"
             />
             <button
               type="submit"
               disabled={authBusy || authCode.trim().length === 0}
-              className="mt-3 w-full rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
+              className="mt-3 w-full rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-50"
             >
               {authBusy ? "Checking…" : "Sign in with code"}
             </button>
@@ -492,44 +562,81 @@ export function StudioApp() {
 
   function renderScreen() {
     switch (screen) {
-      case "overview":
+      case "overview": {
+        const theme = getTheme(draft!.settings?.palette);
+        const tiles = [
+          { label: "Live version", value: `v${meta!.version}`, tone: "bg-lavender" },
+          { label: "Last published", value: formatWhen(meta!.publishedAt), tone: "bg-butter" },
+          { label: "Draft", value: dirty ? "Unpublished changes" : "All published", tone: dirty ? "bg-peach" : "bg-mint" },
+          { label: "History", value: `${history.length} earlier ${history.length === 1 ? "version" : "versions"}`, tone: "bg-blush" },
+        ];
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {greeting}, {firstName} 👋
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                Manage your portfolio content and publish updates.
-              </p>
+          <div className="space-y-5">
+            <div className="card relative overflow-hidden p-6 md:p-8">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-20 -top-28 h-72 w-96 rounded-full"
+                style={{ background: "radial-gradient(closest-side, rgba(247, 224, 150, 0.85), rgba(247, 224, 150, 0))" }}
+              />
+              <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
+                <AvatarTile
+                  src={draft!.hero.photo.url || CAST.owner.src}
+                  photo={Boolean(draft!.hero.photo.url)}
+                  sizes="96px"
+                  tone={CAST.owner.tone}
+                  tilt={-6}
+                  border="border-4"
+                  className="size-20 md:size-24"
+                />
+                <div className="min-w-0">
+                  <h2 className="text-[30px] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink md:text-[36px]">
+                    {greeting}, {firstName}
+                    <span className="text-[#e0a82e]">.</span>
+                  </h2>
+                  <p className="mt-2 max-w-[48ch] text-[15px] leading-relaxed text-muted">
+                    Everything you change saves to your draft as you type. The live site only changes when you press{" "}
+                    <span className="font-semibold text-ink">Publish</span>.
+                  </p>
+                </div>
+              </div>
+              <div className="relative mt-6 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScreen("theme")}
+                  className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[14px] font-semibold text-white hover:opacity-90"
+                >
+                  <Palette className="h-4 w-4" strokeWidth={2.2} />
+                  Theme: {theme.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("chatter")}
+                  className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2.5 text-[14px] font-semibold text-ink hover:border-ink/30"
+                >
+                  <MessageCircle className="h-4 w-4" strokeWidth={2.2} />
+                  Team chatter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("projects")}
+                  className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2.5 text-[14px] font-semibold text-ink hover:border-ink/30"
+                >
+                  <FolderOpen className="h-4 w-4" strokeWidth={2.2} />
+                  Projects
+                </button>
+              </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="card !rounded-2xl p-5">
-                <p className="utility">Live version</p>
-                <p className="mt-2 text-2xl font-bold">v{meta!.version}</p>
-              </div>
-              <div className="card !rounded-2xl p-5">
-                <p className="utility">Last published</p>
-                <p className="mt-2 text-sm font-semibold">{formatWhen(meta!.publishedAt)}</p>
-              </div>
-              <div className="card !rounded-2xl p-5">
-                <p className="utility">Draft status</p>
-                <p className={`mt-2 text-sm font-semibold ${dirty ? "text-warning" : "text-success"}`}>
-                  {dirty ? "Unpublished changes" : "Everything is published"}
-                </p>
-              </div>
-              <div className="card !rounded-2xl p-5">
-                <p className="utility">Earlier versions</p>
-                <p className="mt-2 text-sm font-semibold">{history.length} in history</p>
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {tiles.map((t) => (
+                <div key={t.label} className={`rounded-[24px] p-5 ${t.tone}`}>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/60">{t.label}</p>
+                  <p className="mt-3 text-[20px] font-extrabold tracking-[-0.03em] text-ink">{t.value}</p>
+                </div>
+              ))}
             </div>
-            <p className="text-sm leading-relaxed text-muted">
-              Pick a section from the menu to edit it. Everything you type saves to your draft
-              automatically — the live site only changes when you press{" "}
-              <span className="font-semibold text-ink">Publish</span>.
-            </p>
           </div>
         );
+      }
       case "sections":
         return (
           <SectionsManager
@@ -572,6 +679,25 @@ export function StudioApp() {
             busy={busy}
           />
         );
+      case "theme":
+        return (
+          <ThemePicker
+            value={draft!.settings?.palette}
+            onChange={(id) => patchSettings({ palette: id === "default" ? undefined : id })}
+            dirty={dirty}
+            busy={busy}
+            onPublish={handlePublish}
+          />
+        );
+      case "chatter":
+        return (
+          <ChatterForm
+            chatter={draft!.settings?.chatter}
+            name={draft!.hero.name}
+            photo={draft!.hero.photo.url || undefined}
+            onChange={(chatter) => patchSettings({ chatter })}
+          />
+        );
       case "hero":
         return <HeroForm hero={draft!.hero} onChange={(hero) => setDraft((d) => (d ? { ...d, hero } : d))} />;
       case "contact":
@@ -586,6 +712,7 @@ export function StudioApp() {
           <SiteSettingsForm
             content={draft!}
             onChange={(settings) => setDraft((d) => (d ? { ...d, settings } : d))}
+            onOpenTheme={() => setScreen("theme")}
           />
         );
       case "seo":
@@ -710,10 +837,17 @@ export function StudioApp() {
   return (
     <div className="theme-studio flex min-h-screen bg-bg text-ink">
       {/* Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-3 py-5 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-line bg-[#faf6ee] px-3 py-5 md:flex">
         <div className="flex items-center gap-2.5 px-2">
           <BrandMark />
-          <span className="text-sm font-semibold">Content studio</span>
+          <span className="text-[19px] font-extrabold tracking-[-0.045em] text-ink">
+            studio<span className="text-[#e0a82e]">.</span>
+          </span>
+          {demo && (
+            <span className="ml-auto rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-ink">
+              Demo
+            </span>
+          )}
         </div>
         <nav className="mt-6 flex-1 space-y-0.5" aria-label="Studio">
           {NAV.map(({ key, Icon }) => (
@@ -722,11 +856,11 @@ export function StudioApp() {
               type="button"
               onClick={() => setScreen(key)}
               aria-current={screen === key ? "page" : undefined}
-              className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-200 ${
-                screen === key ? "bg-ink text-white" : "text-muted hover:bg-bg hover:text-ink"
+              className={`flex w-full items-center gap-2.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200 ${
+                screen === key ? "bg-ink text-white shadow-pop" : "text-muted hover:bg-surface hover:text-ink"
               }`}
             >
-              <Icon className="h-4 w-4" strokeWidth={2} />
+              <Icon className="h-4 w-4" strokeWidth={2.1} />
               {getScreenLabel(key)}
             </button>
           ))}
@@ -740,8 +874,8 @@ export function StudioApp() {
                   type="button"
                   onClick={() => setScreen(cKey)}
                   aria-current={screen === cKey ? "page" : undefined}
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-200 ${
-                    screen === cKey ? "bg-ink text-white" : "text-muted hover:bg-bg hover:text-ink"
+                  className={`flex w-full items-center gap-2.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-200 ${
+                    screen === cKey ? "bg-ink text-white shadow-pop" : "text-muted hover:bg-surface hover:text-ink"
                   }`}
                 >
                   <Layers className="h-4 w-4 text-accent" strokeWidth={2} />
@@ -750,16 +884,31 @@ export function StudioApp() {
               );
             })}
         </nav>
-        <div className="border-t border-line px-2 pt-4">
-          <p className="truncate text-xs text-muted">{user.email}</p>
-          <button
-            type="button"
-            onClick={() => getSupabase().auth.signOut()}
-            className="mt-2 flex items-center gap-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-ink"
-          >
-            <LogOut className="h-4 w-4" strokeWidth={2} />
-            Sign out
-          </button>
+        <div className="mt-4 flex items-center gap-3 rounded-[20px] border border-line bg-surface p-2.5">
+          <AvatarTile
+            src={draft.hero.photo.url || CAST.owner.src}
+            photo={Boolean(draft.hero.photo.url)}
+            sizes="40px"
+            tone={CAST.owner.tone}
+            tilt={-6}
+            border="border-2"
+            className="size-10"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-bold text-ink">{draft.hero.name}</p>
+            <p className="truncate text-[11px] text-muted">{user.email}</p>
+          </div>
+          {!demo && (
+            <button
+              type="button"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={() => getSupabase().auth.signOut()}
+              className="rounded-full p-2 text-muted transition-colors duration-200 hover:bg-bg hover:text-ink"
+            >
+              <LogOut className="h-4 w-4" strokeWidth={2} />
+            </button>
+          )}
         </div>
       </aside>
 
@@ -771,7 +920,7 @@ export function StudioApp() {
               {/* Mobile nav */}
               <select
                 aria-label="Studio screen"
-                className="rounded-[12px] border border-line bg-surface px-2.5 py-2 text-sm font-medium md:hidden"
+                className="rounded-full border border-line bg-surface px-3 py-2 text-sm font-semibold md:hidden"
                 value={screen}
                 onChange={(e) => setScreen(e.target.value as Screen)}
               >
@@ -788,7 +937,7 @@ export function StudioApp() {
                     </option>
                   ))}
               </select>
-              <h1 className="hidden truncate text-base font-semibold md:block">
+              <h1 className="hidden truncate text-[17px] font-extrabold tracking-[-0.03em] md:block">
                 {getScreenLabel(screen)}
               </h1>
               <span
@@ -809,7 +958,7 @@ export function StudioApp() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Open the live site"
-                className="rounded-xl border border-line bg-surface p-2.5 text-muted transition-colors duration-200 hover:text-ink"
+                className="rounded-full border border-line bg-surface p-2.5 text-muted transition-colors duration-200 hover:text-ink"
               >
                 <ExternalLink className="h-4 w-4" strokeWidth={2} />
               </a>
@@ -817,7 +966,7 @@ export function StudioApp() {
                 type="button"
                 aria-label={showPreview ? "Hide preview" : "Show preview"}
                 onClick={() => setShowPreview((v) => !v)}
-                className="hidden rounded-xl border border-line bg-surface p-2.5 text-muted transition-colors duration-200 hover:text-ink lg:block"
+                className="hidden rounded-full border border-line bg-surface p-2.5 text-muted transition-colors duration-200 hover:text-ink lg:block"
               >
                 {showPreview ? (
                   <EyeOff className="h-4 w-4" strokeWidth={2} />
@@ -830,8 +979,9 @@ export function StudioApp() {
                 disabled={busy || !dirty}
                 onClick={handlePublish}
                 title={dirty ? "Make the draft live" : "No changes to publish"}
-                className="rounded-[14px] bg-ink px-4 py-2.5 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-40"
+                className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white shadow-pop transition-opacity duration-200 hover:opacity-90 disabled:opacity-40 disabled:shadow-none"
               >
+                {dirty && <span aria-hidden className="size-2 rounded-full bg-[#f5c542]" />}
                 {busy ? "Working…" : "Publish"}
               </button>
             </div>
@@ -845,7 +995,7 @@ export function StudioApp() {
             </div>
           </main>
           {showPreview && screen !== "preview" && (
-            <aside className="hidden w-[46%] shrink-0 border-l border-line p-4 lg:block xl:w-[42%]">
+            <aside className="hidden w-[46%] shrink-0 border-l border-line bg-[#faf6ee] p-4 lg:block xl:w-[42%]">
               <div className="sticky top-20 flex h-[calc(100vh-6.5rem)] flex-col">
                 {historicalPreview && (
                   <div className="mb-2 flex items-center justify-between rounded-xl border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs text-warning">
@@ -873,7 +1023,7 @@ export function StudioApp() {
       {toast && (
         <div
           role="status"
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-[14px] bg-ink px-5 py-3 text-sm font-medium text-white shadow-pop"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white shadow-pop"
         >
           {toast}
         </div>

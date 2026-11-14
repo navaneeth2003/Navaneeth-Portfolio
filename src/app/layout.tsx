@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Inter_Tight } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+// One family for the whole product — the public site and the content studio.
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-sans-next",
-  display: "swap",
-});
-
-const interTight = Inter_Tight({
-  subsets: ["latin"],
-  variable: "--font-display-next",
+  variable: "--font-jakarta-next",
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -36,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${interTight.variable}`}
+      className={jakarta.variable}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -45,7 +41,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://sbrcekbvqlcgsgmhzgfk.supabase.co" />
         <link rel="author" href="/humans.txt" />
       </head>
-      <body className="bg-[#09090b] text-white antialiased">{children}</body>
+      <body className="bg-[#f5f0e6] text-[#121211] antialiased">{children}</body>
     </html>
   );
 }

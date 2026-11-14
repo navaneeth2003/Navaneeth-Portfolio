@@ -29,6 +29,45 @@ export function safeLinkUrl(value: string | null | undefined): string | undefine
   }
 }
 
+const ANCHOR = /^#[A-Za-z][\w-]*$/;
+const MAILTO = /^mailto:[^\s@<>"]+@[^\s@<>"]+$/i;
+
+/**
+ * A call-to-action target: everything safeLinkUrl allows, plus an in-page
+ * anchor ("#contact" — the studio's own default for custom sections) and a
+ * mailto: address. Still never javascript:, data: or the like.
+ */
+export function safeActionUrl(value: string | null | undefined): string | undefined {
+  const v = value?.trim();
+  if (!v) return undefined;
+  if (ANCHOR.test(v) || MAILTO.test(v)) return v;
+  return safeLinkUrl(v);
+}
+
+/** An absolute http(s) URL (a canonical address must be one); undefined otherwise. */
+export function absoluteUrl(value: string | null | undefined): string | undefined {
+  const v = safeLinkUrl(value);
+  return v && ABSOLUTE.test(v) ? v : undefined;
+}
+
+/** Hosts next.config.ts lets next/image optimise (images.remotePatterns) — keep the two in step. */
+const OPTIMIZED_HOSTS = [/^[a-z0-9-]+\.supabase\.co$/i, /^framerusercontent\.com$/i, /^fonts\.gstatic\.com$/i, /^images\.unsplash\.com$/i];
+
+/**
+ * Whether next/image may optimise this source. Anything else — a custom
+ * Supabase domain, a self-hosted or http URL, a local path with a query — is
+ * rendered `unoptimized` instead, so it still shows rather than erroring.
+ */
+export function optimizableImage(src: string): boolean {
+  if (ROOT_RELATIVE.test(src)) return !src.includes("?");
+  try {
+    const u = new URL(src);
+    return u.protocol === "https:" && OPTIMIZED_HOSTS.some((h) => h.test(u.hostname));
+  } catch {
+    return false;
+  }
+}
+
 /** An image source the site may render (uploads are https Supabase URLs); same rule as links. */
 export const safeImageUrl = safeLinkUrl;
 
@@ -49,7 +88,7 @@ function optionalImg(ref: ImageRef | undefined): ImageRef | undefined {
 export function sanitizeContent(content: SiteContent): SiteContent {
   return {
     ...content,
-    hero: { ...content.hero, photo: img(content.hero.photo) },
+    hero: { ...content.hero, photo: img(content.hero.photo), avatar: optionalImg(content.hero.avatar) },
     contact: {
       ...content.contact,
       linkedinUrl: safeLinkUrl(content.contact.linkedinUrl),
@@ -121,11 +160,11 @@ export function sanitizeContent(content: SiteContent): SiteContent {
             data: {
               ...s.data,
               image: optionalImg(s.data.image),
-              ctaUrl: safeLinkUrl(s.data.ctaUrl),
+              ctaUrl: safeActionUrl(s.data.ctaUrl),
               items: s.data.items?.map((item) => ({
                 ...item,
                 image: optionalImg(item.image),
-                linkUrl: safeLinkUrl(item.linkUrl),
+                linkUrl: safeActionUrl(item.linkUrl),
               })),
             },
           };

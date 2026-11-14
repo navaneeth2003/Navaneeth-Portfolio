@@ -132,7 +132,7 @@ export function Preview({ draft }: { draft: SiteContent }) {
             onChange={(e) =>
               setSizeIndex((s) => ({ ...s, [device]: Number(e.target.value) }))
             }
-            className="max-w-[170px] rounded-[10px] border border-line bg-surface px-2 py-1.5 text-xs font-medium text-ink"
+            className="max-w-[170px] rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink"
           >
             {def.sizes.map((s, i) => (
               <option key={s.name} value={i}>
@@ -140,7 +140,7 @@ export function Preview({ draft }: { draft: SiteContent }) {
               </option>
             ))}
           </select>
-          <div className="flex rounded-[12px] border border-line bg-surface p-0.5">
+          <div className="flex rounded-full border border-line bg-surface p-0.5">
             {DEVICES.map(({ key, label, Icon }) => (
               <button
                 key={key}
@@ -148,7 +148,7 @@ export function Preview({ draft }: { draft: SiteContent }) {
                 aria-label={`Preview on ${label}`}
                 aria-pressed={device === key}
                 onClick={() => setDevice(key)}
-                className={`rounded-[10px] px-3 py-1.5 transition-colors duration-200 ${
+                className={`rounded-full px-3 py-1.5 transition-colors duration-200 ${
                   device === key ? "bg-ink text-white" : "text-muted hover:text-ink"
                 }`}
               >
@@ -162,7 +162,7 @@ export function Preview({ draft }: { draft: SiteContent }) {
       {/* the stage: the device sits centred on a dotted mat */}
       <div
         ref={stageRef}
-        className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-line bg-[#e9e7e2] [background-image:radial-gradient(rgba(0,0,0,0.09)_1px,transparent_1px)] [background-size:18px_18px]"
+        className="relative min-h-0 flex-1 overflow-hidden rounded-[24px] border border-line bg-[#efe8da] [background-image:radial-gradient(rgba(64,48,16,0.12)_1px,transparent_1px)] [background-size:18px_18px]"
       >
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -188,7 +188,7 @@ export function Preview({ draft }: { draft: SiteContent }) {
               </div>
             )}
             <div
-              className="overflow-hidden bg-[#070708]"
+              className="overflow-hidden bg-[#f5f0e6]"
               style={{
                 width: size.w,
                 height: size.h,

@@ -1,133 +1,240 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView } from "motion/react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { ChevronDown, Trophy } from "lucide-react";
 import type { ExperienceItem } from "@/lib/types";
-import { formatRange, initials, pad2 } from "@/lib/format";
-import { GridLines, useReveal } from "@/components/ui";
-import { GhostTitle } from "./GhostTitle";
+import { formatRange, initials, plural, yearOf } from "@/lib/format";
+import { ScrollReveal, siteScrollTo } from "@/components/ui";
+import { Eyebrow, SafeImg, SECTION_Y, WRAP, tileAt } from "./kit";
 
 /**
- * Experience as the reference's "journey" list: hairline-divided rows, a big
- * role title with a superscript index on the left, the story on the right,
- * hashtag tags. The journey line (site/JourneyFlow, mounted in PublicSite)
- * runs behind this section at z-1, which is why the content sits at z-2.
+ * Experience as a timeline. Laptops and up: a sticky header column (the
+ * CMS label, a summary derived from the entries and a stack of company
+ * tiles) beside a dashed rail of role cards. Tablets: the header stacks on
+ * top. Phones: the same rail, tighter — each card keeps its role, dates and
+ * highlight in full, while the details fold to a few lines that fade out
+ * above a "Read more" pill. Every count, year and company here comes from
+ * the entries.
  */
-export function ExperienceSection({ items, title }: { items: ExperienceItem[]; title?: string }) {
-  return (
-    <section
-      id="experience"
-      className="relative scroll-mt-24 overflow-hidden bg-transparent px-5 pb-10 pt-6 sm:px-6 md:px-12 md:pt-10"
-    >
-      <GridLines />
-      <div className="relative z-[2]">
-        <GhostTitle>{title || "Experience"}</GhostTitle>
-      </div>
 
-      <div className="relative z-[2] mx-auto mt-4 max-w-[1440px] md:mt-8">
-        {items.map((e, i) => (
-          <ExperienceRow key={e.id} item={e} index={i} />
-        ))}
+/** How much of a role's details a phone shows before "Read more" (px). */
+const FOLDED = 76;
+export function ExperienceSection({ items, title }: { items: ExperienceItem[]; title?: string }) {
+  const label = (title || "Experience").trim();
+  const companies = Array.from(
+    new Map(items.map((e) => [e.company.trim().toLowerCase(), e])).values(),
+  ).filter((e) => e.company.trim());
+  const starts = items.map((e) => yearOf(e.startDate)).filter((y): y is number => y !== null);
+  const ends = items.map((e) => (e.endDate === "present" ? null : yearOf(e.endDate))).filter((y): y is number => y !== null);
+  const current = items.some((e) => e.endDate === "present");
+  const from = starts.length ? Math.min(...starts) : null;
+  const to = current ? "today" : ends.length ? String(Math.max(...ends)) : null;
+  const dot = /[\p{L}\p{N}]$/u.test(label);
+
+  return (
+    <section id="experience" className={`relative scroll-mt-24 ${SECTION_Y}`}>
+      <div className={`${WRAP} grid grid-cols-1 gap-10 md:gap-12 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.5fr)] lg:gap-14 xl:gap-20`}>
+        {/* header column */}
+        <ScrollReveal className="lg:sticky lg:top-32 lg:self-start">
+          <Eyebrow>
+            {plural(items.length, "role")} · {plural(companies.length, "company", "companies")}
+          </Eyebrow>
+          <h2 className="display mt-5 break-words text-[clamp(40px,11vw,54px)] md:mt-6 md:text-[68px] lg:text-[48px] xl:text-[58px] 2xl:text-[64px] 3xl:text-[80px]">
+            {label}
+            {dot && <span className="text-pop">.</span>}
+          </h2>
+          {from && to && (
+            <p className="mt-4 text-[16px] text-ash md:text-[18px] 3xl:text-[21px]">
+              From {from} to {to}, across {companies.length === 1 ? "one team" : `${companies.length} teams`}.
+            </p>
+          )}
+          {/* the company stack */}
+          <div className="mt-6 flex items-center md:mt-8">
+            <div className="flex -space-x-3">
+              {companies.slice(0, 6).map((e, i) => (
+                <span
+                  key={e.company}
+                  title={e.company}
+                  className={`grid size-12 place-items-center overflow-hidden rounded-[30%] border-[3px] border-white text-[15px] font-extrabold text-on-pop shadow-pill md:size-14 3xl:size-16 ${
+                    e.logo?.url ? "bg-white" : tileAt(i)
+                  }`}
+                  style={{ transform: `rotate(${i % 2 ? 5 : -5}deg)`, zIndex: 10 - i }}
+                >
+                  {e.logo?.url ? (
+                    <SafeImg src={e.logo.url} className="h-full w-full object-cover" fallback={initials(e.company, 1)} />
+                  ) : (
+                    initials(e.company, 1)
+                  )}
+                </span>
+              ))}
+            </div>
+            {companies.length > 6 && (
+              <span className="ml-3 rounded-full bg-card px-3 py-1 text-[13px] font-bold text-ash shadow-pill">
+                +{companies.length - 6}
+              </span>
+            )}
+          </div>
+        </ScrollReveal>
+
+        {/* the rail */}
+        <ol className="relative">
+          <span
+            aria-hidden
+            className="absolute bottom-10 left-[21px] top-8 border-l-2 border-dashed border-onyx/15 md:left-[27px]"
+          />
+          {items.map((e, i) => (
+            <ExperienceRow key={e.id} item={e} index={i} />
+          ))}
+        </ol>
       </div>
     </section>
   );
 }
 
-/**
- * One row. All three parts share a single in-view trigger and the title and
- * its meta pill travel the same distance (the pill trailing by 60ms), so the
- * title can never pass through the pill on the way in. The hover slide lives
- * on an inner span: a CSS transition on the element Motion animates would
- * re-tween every frame and make the title lag its siblings — the overlap
- * this fixes.
- */
 function ExperienceRow({ item: e, index: i }: { item: ExperienceItem; index: number }) {
-  const ref = useRef<HTMLElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-  const r = useReveal();
+  const [open, setOpen] = useState(false);
   const bullets = e.bullets.filter((b) => b.trim());
   const tags = (e.tags ?? []).filter((t) => t.trim());
+  const current = e.endDate === "present";
+  const detailsId = `exp-${e.id}-details`;
 
-  const titleHidden = { opacity: 0, y: r.y, filter: r.blur };
-  const metaHidden = { opacity: 0, y: r.y };
-  const bodyHidden = { opacity: 0, y: r.yBody, filter: r.blur };
-  const shown = { opacity: 1, y: 0, filter: "blur(0px)" };
+  // The details' natural height, and whether they run past the fold.
+  // Until measured, assume they do — so phones never jump on load.
+  const cardRef = useRef<HTMLElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<{ full: number; long: boolean; measured: boolean }>({ full: 0, long: true, measured: false });
+  useEffect(() => {
+    const inner = bodyRef.current?.firstElementChild as HTMLElement | null | undefined;
+    if (!inner) return;
+    const measure = () => {
+      const full = inner.offsetHeight;
+      setFit({ full, long: full > FOLDED + 10, measured: true });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, []);
+  const folded = fit.long && !open;
+
+  const toggle = () => {
+    // Folding back up: bring the card's top into view if it scrolled away.
+    if (open) {
+      const top = cardRef.current?.getBoundingClientRect().top ?? 0;
+      if (top < 80) siteScrollTo(window.scrollY + top - 96);
+    }
+    setOpen((v) => !v);
+  };
 
   return (
-    <article
-      ref={ref}
-      className="group grid grid-cols-1 gap-4 border-b border-white/20 py-7 first:border-t sm:py-8 md:gap-6 md:py-10 lg:grid-cols-2 lg:gap-12"
-    >
-      <div className="min-w-0">
-        <motion.h3
-          initial={titleHidden}
-          animate={inView ? shown : titleHidden}
-          transition={{ duration: r.duration, ease: r.ease }}
-          className="font-heading text-[26px] leading-tight tracking-tight text-white sm:text-[30px] md:text-[34px] lg:text-[42px]"
-        >
-          <span className="inline-block max-w-full text-balance break-words transition-transform duration-500 lg:group-hover:translate-x-2">
-            {e.role}
-            <sup className="ml-2 align-super text-[12px] font-normal text-white/50">
-              {pad2(i + 1)}
-            </sup>
-          </span>
-        </motion.h3>
-        <motion.div
-          initial={metaHidden}
-          animate={inView ? { opacity: 1, y: 0 } : metaHidden}
-          transition={{ duration: r.duration, delay: 0.06, ease: r.ease }}
-          className="mt-4 inline-flex max-w-full flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-black px-4 py-3 text-[14px] text-white/80 sm:text-[15px] md:mt-5 md:px-5"
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-md bg-white/10 font-heading text-[11px] font-semibold text-white/80">
-              {e.logo?.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={e.logo.url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                initials(e.company, 1)
-              )}
-            </span>
-            <span className="truncate font-medium text-white">{e.company}</span>
-          </span>
-          <span aria-hidden className="hidden h-1 w-1 rounded-full bg-white/25 sm:block" />
-          <span className="tabular-nums text-white/60">{formatRange(e.startDate, e.endDate)}</span>
-        </motion.div>
-      </div>
-
-      <motion.div
-        initial={bodyHidden}
-        animate={inView ? shown : bodyHidden}
-        transition={{ duration: r.duration, delay: 0.08, ease: r.ease }}
-        className="min-w-0"
+    <li className="relative grid grid-cols-[44px_minmax(0,1fr)] gap-3 pb-5 last:pb-0 md:grid-cols-[56px_minmax(0,1fr)] md:gap-5 md:pb-7">
+      {/* the company node on the rail */}
+      <span
+        aria-hidden
+        className={`relative z-[1] mt-5 grid size-11 place-items-center overflow-hidden rounded-[30%] border-[3px] border-white text-[14px] font-extrabold text-on-pop shadow-pill md:mt-7 md:size-14 md:text-[17px] ${
+          e.logo?.url ? "bg-white" : tileAt(i)
+        }`}
+        style={{ transform: `rotate(${i % 2 ? 4 : -4}deg)` }}
       >
-        {bullets.length > 0 && (
-          <ul className="space-y-3">
-            {bullets.map((b, bi) => (
-              <li
-                key={bi}
-                className="flex gap-3 break-words font-heading text-[15px] font-light leading-[1.65] text-white/80 md:text-[17px]"
-              >
-                <span aria-hidden className="mt-[0.75em] h-1 w-1 shrink-0 rounded-full bg-white/40" />
-                <span className="min-w-0">{b}</span>
-              </li>
-            ))}
-          </ul>
+        {e.logo?.url ? (
+          <SafeImg src={e.logo.url} className="h-full w-full object-cover" fallback={initials(e.company, 1)} />
+        ) : (
+          initials(e.company, 1)
         )}
-        {e.highlight && (
-          <p className="relative mt-5 break-words pl-4 font-heading text-[15px] font-medium leading-snug text-white before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:rounded-full before:bg-gradient-to-b before:from-[#34ffb5] before:via-[#a855f7] before:to-[#ffb03a] md:text-[18px]">
-            {e.highlight}
-          </p>
-        )}
-        {tags.length > 0 && (
-          <p className="mt-4 flex flex-wrap gap-x-2 gap-y-2 font-heading text-[14px] text-white/60 md:text-[16px]">
-            {tags.map((t) => (
-              <span key={t} className="break-words border-l border-white/25 pl-3 first:border-l-0 first:pl-0">
-                # {t}
+      </span>
+
+      <ScrollReveal className="min-w-0">
+        <article
+          ref={cardRef}
+          className="surface rounded-[26px] p-5 transition-transform duration-500 hover:-translate-y-0.5 md:rounded-[32px] md:p-7 xl:p-8 3xl:p-10"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {current && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-mint px-2.5 py-1 text-[12px] font-bold text-onyx 3xl:text-[14px]">
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2fb36b] opacity-60" />
+                  <span className="relative inline-flex size-2 rounded-full bg-[#2fb36b]" />
+                </span>
+                Now
               </span>
-            ))}
-          </p>
-        )}
-      </motion.div>
-    </article>
+            )}
+            <span className="text-[13px] font-semibold tabular-nums text-ash md:text-[14px] 3xl:text-[16px]">
+              {formatRange(e.startDate, e.endDate)}
+            </span>
+          </div>
+          <h3 className="display mt-3 break-words text-[23px] leading-[1.1] tracking-[-0.035em] md:text-[29px] xl:text-[32px] 3xl:text-[40px]">
+            {e.role}
+          </h3>
+          <p className="mt-1.5 text-[15px] font-semibold text-onyx/65 md:text-[16px] 3xl:text-[19px]">{e.company}</p>
+
+          {e.highlight && (
+            <div className="mt-5 flex gap-3 rounded-[20px] bg-pop-soft p-3.5 md:p-4 3xl:p-5">
+              {/* the standout outcome: a quiet trophy, tinted with the theme accent */}
+              <span
+                aria-hidden
+                className="grid size-9 shrink-0 -rotate-6 place-items-center rounded-[30%] border border-hairline bg-card text-pop-ink shadow-pill md:size-10 3xl:size-12"
+              >
+                <Trophy size={17} strokeWidth={2.2} className="3xl:size-5" />
+              </span>
+              <p className="min-w-0 break-words pt-1 text-[14.5px] font-semibold leading-snug text-onyx md:text-[16px] 3xl:text-[19px]">
+                {e.highlight}
+              </p>
+            </div>
+          )}
+
+          {bullets.length > 0 && (
+            <>
+              <div
+                id={detailsId}
+                ref={bodyRef}
+                className={`relative mt-5 max-h-[var(--fold)] overflow-hidden md:max-h-none md:overflow-visible ${
+                  fit.measured ? "transition-[max-height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" : ""
+                } ${folded ? "[mask-image:linear-gradient(to_bottom,#000_40%,transparent)] md:[mask-image:none]" : ""}`}
+                style={{ "--fold": folded ? `${FOLDED}px` : fit.measured ? `${fit.full}px` : "none" } as CSSProperties}
+              >
+                <ul className="space-y-3">
+                  {bullets.map((b, bi) => (
+                    <li key={bi} className="flex gap-3 break-words text-[14.5px] leading-[1.65] text-ash md:text-[16px] 3xl:text-[19px]">
+                      <span aria-hidden className="mt-[0.6em] size-1.5 shrink-0 rounded-full bg-onyx/40" />
+                      <span className="min-w-0">{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {fit.long && (
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-expanded={open}
+                  aria-controls={detailsId}
+                  className="mt-3 inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-hairline bg-well px-4 text-[13.5px] font-semibold text-onyx transition-transform active:scale-[0.97] md:hidden"
+                >
+                  {open ? "Show less" : "Read more"}
+                  <ChevronDown
+                    size={15}
+                    strokeWidth={2.3}
+                    className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+              )}
+            </>
+          )}
+
+          {tags.length > 0 && (
+            <ul className="mt-5 flex flex-wrap gap-2">
+              {tags.map((t, ti) => (
+                <li
+                  key={`${ti}-${t}`}
+                  className="max-w-full break-words rounded-full border border-hairline bg-well px-3 py-1 text-[12.5px] font-semibold text-ash md:text-[13px] 3xl:text-[15px]"
+                >
+                  # {t}
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      </ScrollReveal>
+    </li>
   );
 }

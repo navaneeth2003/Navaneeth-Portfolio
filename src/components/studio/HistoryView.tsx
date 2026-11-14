@@ -180,7 +180,7 @@ export function HistoryView({
                     <button
                       type="button"
                       onClick={() => onPreview(entry)}
-                      className={`inline-flex items-center gap-1.5 rounded-[12px] px-3 py-2 text-xs font-medium transition-colors duration-200 ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-colors duration-200 ${
                         isPreviewing
                           ? "bg-accent text-white font-semibold"
                           : "border border-line bg-surface text-ink hover:bg-bg"
@@ -194,7 +194,7 @@ export function HistoryView({
                       type="button"
                       disabled={busy || actionBusy}
                       onClick={() => setConfirmRestoreEntry(entry)}
-                      className="inline-flex items-center gap-1.5 rounded-[12px] border border-line bg-surface px-3 py-2 text-xs font-medium text-ink transition-colors duration-200 hover:bg-bg disabled:opacity-40"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-2 text-xs font-medium text-ink transition-colors duration-200 hover:bg-bg disabled:opacity-40"
                     >
                       <RotateCcw className="h-3.5 w-3.5 text-muted" />
                       Restore
@@ -205,7 +205,7 @@ export function HistoryView({
                       disabled={busy || actionBusy}
                       onClick={() => setConfirmDeleteVersion(entry.version)}
                       title="Delete version from history"
-                      className="rounded-[12px] border border-line bg-surface p-2 text-muted transition-colors duration-200 hover:border-danger hover:text-danger disabled:opacity-40"
+                      className="rounded-full border border-line bg-surface p-2 text-muted transition-colors duration-200 hover:border-danger hover:text-danger disabled:opacity-40"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

@@ -25,7 +25,7 @@ export default function StudioPreviewPage() {
 
   if (!content) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#070708] font-heading text-[13px] uppercase tracking-[0.2em] text-white/40">
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f0e6] font-heading text-[13px] font-semibold uppercase tracking-[0.2em] text-[#5b5750]">
         Loading preview…
       </div>
     );

@@ -1,74 +1,71 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView } from "motion/react";
+import { GraduationCap } from "lucide-react";
 import type { EducationItem } from "@/lib/types";
-import { pad2 } from "@/lib/format";
-import { GridLines, useReveal } from "@/components/ui";
-import { GhostTitle } from "./GhostTitle";
+import { yearOf } from "@/lib/format";
+import { ScrollReveal } from "@/components/ui";
+import { IconTile, SECTION_Y, SectionHeader, WRAP, tintAt } from "./kit";
+
+/** Card width by count from md up (a short last row centres) — written out so Tailwind sees them. */
+const WIDTH: Record<number, string> = {
+  1: "md:w-full md:max-w-[560px]",
+  2: "md:w-[calc(50%-10px)]",
+  3: "md:w-[calc(50%-10px)] lg:w-[calc(33.333%-13.34px)] 3xl:w-[calc(33.333%-16px)]",
+};
 
 /**
- * Education as divided rows: the degree on the left, and on the right the
- * reference's black meta pill (institution · years) — the same pill the
- * Experience rows use, so the two sections read as one system.
+ * Education as the reference's "how it works" cards: pastel tiles with a
+ * white icon tile and the finishing year in big faded type, then the degree,
+ * the institution and the years. One column on phones, two on tablets, three
+ * on laptops and up when there are three or more.
  */
 export function EducationSection({ items, title }: { items: EducationItem[]; title?: string }) {
+  const starts = items.map((e) => yearOf(e.startYear)).filter((y): y is number => y !== null);
+  const ends = items.map((e) => yearOf(e.endYear)).filter((y): y is number => y !== null);
+  const span = starts.length && ends.length ? `${Math.min(...starts)} — ${Math.max(...ends)}` : undefined;
+
   return (
-    <section
-      id="education"
-      className="relative scroll-mt-24 overflow-hidden bg-transparent px-5 pb-10 pt-6 sm:px-6 md:px-12 md:pt-10"
-    >
-      <GridLines />
-      <GhostTitle>{title || "Education"}</GhostTitle>
-      <div className="relative z-[2] mx-auto mt-4 max-w-[1440px] md:mt-8">
-        {items.map((e, i) => (
-          <EducationRow key={e.id} item={e} index={i} />
-        ))}
+    <section id="education" className={`relative scroll-mt-24 ${SECTION_Y}`}>
+      <div className={WRAP}>
+        <ScrollReveal>
+          <SectionHeader eyebrow={span ?? "Where it started"} title={title || "Education"} />
+        </ScrollReveal>
+        <ul className="mt-10 flex flex-col gap-4 md:mt-14 md:flex-row md:flex-wrap md:justify-center md:gap-5 3xl:mt-16 3xl:gap-6">
+          {items.map((e, i) => {
+            const years = [e.startYear, e.endYear].filter(Boolean).join(" — ");
+            const end = yearOf(e.endYear) ?? yearOf(e.startYear);
+            return (
+              <li key={e.id} className={WIDTH[Math.min(items.length, 3)]}>
+                <ScrollReveal delay={Math.min(i * 0.06, 0.18)} className="h-full">
+                  <div
+                    className={`relative flex h-full min-h-[240px] flex-col overflow-hidden rounded-[28px] p-6 md:min-h-[280px] md:rounded-[36px] md:p-8 3xl:min-h-[340px] 3xl:p-10 ${tintAt(i)}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <IconTile icon={GraduationCap} className="size-12 md:size-14 3xl:size-16" size={22} />
+                      {end && (
+                        <span aria-hidden className="display text-[52px] text-onyx/10 md:text-[64px] 3xl:text-[84px]">
+                          {end}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="mt-auto break-words pt-8 text-[20px] font-bold leading-snug tracking-[-0.025em] text-onyx md:text-[23px] 3xl:text-[28px]">
+                      {e.degree}
+                    </h3>
+                    {e.institution && (
+                      <p className="mt-2 break-words text-[15px] font-medium text-onyx/70 md:text-[16px] 3xl:text-[19px]">{e.institution}</p>
+                    )}
+                    {years && (
+                      <p className="mt-4 inline-flex self-start rounded-full bg-card/70 px-3 py-1 text-[13px] font-semibold tabular-nums text-onyx/70 3xl:text-[15px]">
+                        {years}
+                      </p>
+                    )}
+                  </div>
+                </ScrollReveal>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </section>
-  );
-}
-
-// Same reveal contract as the Experience rows: one trigger, equal travel for
-// the title and the pill, hover slide on an inner span.
-function EducationRow({ item: e, index: i }: { item: EducationItem; index: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-  const r = useReveal();
-  const titleHidden = { opacity: 0, y: r.y, filter: r.blur };
-  const metaHidden = { opacity: 0, y: r.y };
-  const years = [e.startYear, e.endYear].filter(Boolean).join(" — ");
-
-  return (
-    <div
-      ref={ref}
-      className="group grid grid-cols-1 gap-4 border-b border-white/20 py-6 first:border-t sm:py-8 md:gap-6 md:py-10 lg:grid-cols-2 lg:gap-12"
-    >
-      <motion.h3
-        initial={titleHidden}
-        animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : titleHidden}
-        transition={{ duration: r.duration, ease: r.ease }}
-        className="font-heading text-[22px] leading-tight tracking-tight text-white sm:text-[26px] md:text-[30px] lg:text-[34px]"
-      >
-        <span className="inline-block max-w-full text-balance break-words transition-transform duration-500 lg:group-hover:translate-x-2">
-          {e.degree}
-          <sup className="ml-2 align-super text-[12px] font-normal text-white/50">{pad2(i + 1)}</sup>
-        </span>
-      </motion.h3>
-      <motion.div
-        initial={metaHidden}
-        animate={inView ? { opacity: 1, y: 0 } : metaHidden}
-        transition={{ duration: r.duration, delay: 0.08, ease: r.ease }}
-        className="min-w-0 self-center"
-      >
-        <div className="inline-flex max-w-full flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl bg-black px-5 py-4 text-[14px] text-white/80 sm:text-[15px] md:px-6">
-          {e.institution && <span className="break-words font-medium text-white">{e.institution}</span>}
-          {e.institution && years && (
-            <span aria-hidden className="hidden h-1 w-1 rounded-full bg-white/25 sm:block" />
-          )}
-          {years && <span className="tabular-nums">{years}</span>}
-        </div>
-      </motion.div>
-    </div>
   );
 }

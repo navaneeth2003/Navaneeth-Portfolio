@@ -2,6 +2,7 @@ import { cache } from "react";
 import { SEED_CONTENT } from "./seed";
 import { getSupabase, supabaseEnabled } from "./supabase";
 import type { SiteContent } from "./types";
+import { normalizeContent } from "./normalize";
 
 export type PublishedSite = {
   content: SiteContent;
@@ -27,11 +28,11 @@ export const getPublishedSite = cache(async function getPublishedSite(): Promise
     const sb = getSupabase();
     const view = await sb.from("site_public").select("published, version").eq("id", "main").maybeSingle();
     if (!view.error && view.data) {
-      return { content: view.data.published as SiteContent, version: view.data.version, live: true };
+      return { content: normalizeContent(view.data.published), version: view.data.version, live: true };
     }
     const table = await sb.from("site").select("published, version").eq("id", "main").maybeSingle();
     if (table.error || !table.data) return FALLBACK;
-    return { content: table.data.published as SiteContent, version: table.data.version, live: true };
+    return { content: normalizeContent(table.data.published), version: table.data.version, live: true };
   } catch {
     return FALLBACK;
   }

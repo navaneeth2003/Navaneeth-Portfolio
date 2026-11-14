@@ -1,107 +1,138 @@
+import { ArrowUp, ArrowUpRight, FileText, Mail } from "lucide-react";
 import type { ContactInfo, SiteSettings } from "@/lib/types";
 import { DEFAULT_DEVELOPER } from "@/lib/seo";
-import { ChevronRight } from "lucide-react";
+import { LinkedInIcon } from "./ui";
+import type { NavLink } from "./Navbar";
+import { OwnerAvatar } from "./site/kit";
 
+/**
+ * The footer bookends the floating nav: one wide island at the foot of the
+ * page. Inside, his avatar and name with the tagline, the page's own
+ * section links, the ways to reach him (each a little coloured chip) and a
+ * way back up. Underneath, quietly, the CMS's copyright and developer
+ * credit. Phones stack it all, centred, clear of the tab bar.
+ */
 export function Footer({
   name,
+  avatar,
+  tagline,
   contact,
   settings,
+  links,
 }: {
   name: string;
+  /** The studio's avatar (or photo); missing = the illustrated one. */
+  avatar?: string;
+  tagline?: string;
   contact: ContactInfo;
   settings?: SiteSettings;
+  links: NavLink[];
 }) {
-  // The same ContactInfo the hero, nav and contact section read — the phone
-  // number is deliberately never one of these links.
-  const links = [
-    { label: "Email", href: `mailto:${contact.email.trim()}` },
-    contact.linkedinUrl ? { label: "LinkedIn", href: contact.linkedinUrl, external: true } : null,
-    contact.resumeUrl ? { label: "Resume", href: contact.resumeUrl, external: true } : null,
-  ].filter((l): l is { label: string; href: string; external?: boolean } => Boolean(l));
-
   const dev = settings?.seo?.developerCredit ?? DEFAULT_DEVELOPER;
+  const who = name.trim();
+  const email = contact.email.trim();
+  const linkedin = contact.linkedinUrl?.trim();
+  const resume = contact.resumeUrl?.trim();
+
+  const chip =
+    "group inline-flex min-h-[44px] items-center gap-2 rounded-full border border-hairline bg-card px-3 pr-4 text-[14px] font-semibold text-onyx shadow-pill transition-transform hover:-translate-y-0.5 3xl:min-h-[52px] 3xl:text-[16px]";
+  const tile = "grid size-6 shrink-0 place-items-center rounded-[8px] 3xl:size-7";
 
   return (
-    <footer className="relative overflow-hidden bg-transparent pb-6 pt-8 md:pb-8 md:pt-10">
-      {/* Editorial segmented links ribbon (Image 2 aesthetic, elevated with micro-interactions) */}
-      <div className="mx-auto max-w-[1240px] px-5 sm:px-6 md:px-12">
-        <nav
-          aria-label="Footer navigation"
-          className="grid grid-cols-1 border-y border-white/[0.08] sm:grid-cols-3 sm:divide-x sm:divide-white/[0.08]"
-        >
-          {links.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              target={l.external ? "_blank" : undefined}
-              rel={l.external ? "noreferrer" : undefined}
-              className="group relative flex min-h-[56px] items-center justify-between px-6 py-4 font-heading transition-colors duration-300 hover:bg-white/[0.03] active:bg-white/[0.06] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white sm:px-8 sm:py-5"
-            >
-              {/* Subtle top hairline accent on hover */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-              />
-
-              <span className="text-[14px] font-normal tracking-wide text-white/70 transition-colors duration-300 group-hover:text-white sm:text-[15px]">
-                {l.label}
+    <footer className="relative px-3 pb-28 pt-8 md:px-5 md:pt-12 lg:pb-6 3xl:pb-10">
+      <div className="mx-auto max-w-[1360px] 3xl:max-w-[1760px]">
+        <div className="rounded-[32px] border border-hairline bg-card/75 px-6 py-8 shadow-card backdrop-blur md:rounded-[40px] md:px-9 md:py-9 lg:px-10 3xl:px-14 3xl:py-12">
+          <div className="flex flex-col items-center gap-7 text-center md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-10 md:gap-y-7 md:text-left lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:gap-x-12">
+            {/* who */}
+            <a href="#hero" aria-label={who ? `${who} — back to top` : "Back to top"} className="group flex flex-col items-center gap-3 md:flex-row md:gap-4">
+              <OwnerAvatar src={avatar} className="size-14 3xl:size-16" />
+              <span className="min-w-0">
+                {who && <span className="block break-words text-[19px] font-extrabold tracking-[-0.035em] text-onyx 3xl:text-[23px]">{who}</span>}
+                {tagline && (
+                  <span className="mt-0.5 block max-w-[40ch] text-balance text-[14px] font-medium leading-snug text-ash 3xl:text-[16px]">
+                    {tagline}
+                  </span>
+                )}
               </span>
-
-              <ChevronRight
-                size={17}
-                strokeWidth={1.8}
-                className="text-white/35 transition-all duration-300 group-hover:translate-x-1.5 group-hover:text-white"
-                aria-hidden
-              />
             </a>
-          ))}
-        </nav>
-      </div>
 
-      <p
-        aria-hidden
-        className="pointer-events-none mx-auto mt-6 max-w-full select-none overflow-hidden whitespace-nowrap text-center font-heading text-[15vw] font-bold leading-[0.9] tracking-tight text-white/[0.09] sm:mt-8 sm:text-[16vw] md:mt-10 md:text-[13vw] lg:text-[11vw]"
-      >
-        {name}
-      </p>
-      <div className="mt-4 flex flex-col items-center justify-center gap-2 px-5 text-center font-heading text-[12px] leading-relaxed text-white/35 sm:flex-row sm:gap-3">
-        <span>{settings?.copyrightText?.trim() || `© ${new Date().getFullYear()} ${name}. All rights reserved.`}</span>
-        {dev.enabled && (
-          <>
-            <span className="hidden text-white/20 sm:inline" aria-hidden>
-              •
-            </span>
+            {/* the page */}
+            <nav aria-label="Footer" className="md:order-3 md:col-span-2 lg:order-none lg:col-span-1">
+              <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2.5 text-[15px] font-semibold text-ash md:justify-start lg:justify-center 3xl:gap-x-8 3xl:text-[17px]">
+                {links.map((l) => (
+                  <li key={l.id}>
+                    <a href={l.href} className="transition-colors hover:text-onyx">
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            {/* the ways in, and back up */}
+            <div className="flex flex-wrap items-center justify-center gap-2.5 md:justify-end">
+              {email && (
+                <a href={`mailto:${email}`} className={chip}>
+                  <span className={`${tile} bg-pop text-on-pop`}>
+                    <Mail size={14} strokeWidth={2.2} aria-hidden />
+                  </span>
+                  Email
+                </a>
+              )}
+              {linkedin && (
+                <a href={linkedin} target="_blank" rel="noreferrer" className={chip}>
+                  <span className={`${tile} bg-[#0a66c2] text-white`}>
+                    <LinkedInIcon size={13} />
+                  </span>
+                  LinkedIn
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              )}
+              {resume && (
+                <a href={resume} target="_blank" rel="noreferrer" className={chip}>
+                  <span className={`${tile} bg-onyx text-on-onyx`}>
+                    <FileText size={13} strokeWidth={2.2} aria-hidden />
+                  </span>
+                  Resume
+                  <ArrowUpRight size={14} strokeWidth={2.3} className="-ml-0.5 text-ash" aria-hidden />
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              )}
+              <a
+                href="#hero"
+                aria-label="Back to top"
+                className="group grid size-11 place-items-center rounded-full bg-onyx text-on-onyx shadow-cta transition-transform hover:-translate-y-0.5 3xl:size-[52px]"
+              >
+                <ArrowUp size={18} strokeWidth={2.4} className="transition-transform group-hover:-translate-y-0.5" aria-hidden />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-col items-center gap-1.5 px-2 text-center text-[13px] text-ash md:flex-row md:justify-between md:px-6 md:text-left 3xl:text-[15px]">
+          <span>{settings?.copyrightText?.trim() || `© ${new Date().getFullYear()}${who ? ` ${who}` : ""}. All rights reserved.`}</span>
+          {dev.enabled && (
             <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
               <span>{dev.role || "Developed by"}</span>
               <a
                 href={dev.siteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-white/70 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="font-semibold text-onyx underline decoration-onyx/25 underline-offset-4 hover:decoration-onyx"
               >
                 {dev.name}
               </a>
               {(dev.linkedinUrl || dev.githubUrl) && (
-                <span className="inline-flex items-center gap-1 text-white/45">
+                <span className="inline-flex items-center gap-1">
                   (
                   {dev.linkedinUrl && (
-                    <a
-                      href={dev.linkedinUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="transition-colors hover:text-white"
-                    >
+                    <a href={dev.linkedinUrl} target="_blank" rel="noopener noreferrer" className="hover:text-onyx">
                       LinkedIn
                     </a>
                   )}
                   {dev.linkedinUrl && dev.githubUrl && <span aria-hidden>·</span>}
                   {dev.githubUrl && (
-                    <a
-                      href={dev.githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="transition-colors hover:text-white"
-                    >
+                    <a href={dev.githubUrl} target="_blank" rel="noopener noreferrer" className="hover:text-onyx">
                       GitHub
                     </a>
                   )}
@@ -109,10 +140,9 @@ export function Footer({
                 </span>
               )}
             </span>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </footer>
   );
 }
-

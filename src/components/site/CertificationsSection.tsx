@@ -1,86 +1,104 @@
 "use client";
 
-import { ArrowUpRight, Award } from "lucide-react";
+import { ArrowUpRight, BadgeCheck } from "lucide-react";
 import type { CertificationItem } from "@/lib/types";
-import { formatMonth, pad2 } from "@/lib/format";
-import { GridLines, ScrollReveal } from "@/components/ui";
-import { GhostTitle } from "./GhostTitle";
+import { formatMonth, listJoin, plural } from "@/lib/format";
+import { ScrollReveal } from "@/components/ui";
+import { SafeImg, SECTION_Y, SectionHeader, WRAP, tileAt } from "./kit";
 
 /**
- * Certifications in the reference's frosted list container (the FAQ glass):
- * numbered rows with the credential on the left and the badge or link on
- * the right. Rows only become links when a credential URL exists.
+ * Certifications as the reference's FAQ cards: off-white tiles in a grid —
+ * one column on phones, two on tablets and laptops, three on large monitors,
+ * with a short last row centred.
+ * Each has its badge (or a check on a pastel squircle), the issuer, the
+ * title, date and credential ID; a card with a credential URL is a link.
  */
 export function CertificationsSection({ items, title }: { items: CertificationItem[]; title?: string }) {
+  const issuers = Array.from(new Set(items.map((c) => c.issuer.trim()).filter(Boolean)));
   return (
-    <section
-      id="certifications"
-      className="relative scroll-mt-24 overflow-hidden bg-transparent px-4 pb-16 pt-6 sm:px-6 md:px-10 md:pb-20 md:pt-10"
-    >
-      <GridLines />
-      <GhostTitle>{title || "Certifications"}</GhostTitle>
-      <div className="relative z-[2] mx-auto mt-2 max-w-[1100px] overflow-hidden rounded-2xl border border-white/10 bg-black/25 backdrop-blur-xl md:mt-6">
-        {items.map((c, i) => {
-          const meta = [
-            c.issuer,
-            c.date ? formatMonth(c.date) : "",
-            c.credentialId ? `Credential ID ${c.credentialId}` : "",
-          ].filter(Boolean);
-          const inner = (
-            <>
-              <span className="font-heading text-[14px] tabular-nums text-white/40 md:text-[16px]">{pad2(i + 1)}</span>
-              <span className="min-w-0">
-                <span className="block text-balance break-words font-heading text-[15px] font-medium leading-snug text-white sm:text-[16px] md:text-[20px]">
-                  {c.title}
-                </span>
-                <span className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 font-heading text-[13px] text-white/55 sm:text-[14px]">
-                  {meta.map((m, mi) => (
-                    <span key={mi} className="break-words border-l border-white/20 pl-2 first:border-l-0 first:pl-0">
-                      {m}
+    <section id="certifications" className={`relative scroll-mt-24 ${SECTION_Y}`}>
+      <div className={WRAP}>
+        <ScrollReveal>
+          <SectionHeader
+            eyebrow={plural(items.length, "credential")}
+            title={title || "Certifications"}
+            sub={issuers.length ? `Earned from ${listJoin(issuers)}.` : undefined}
+          />
+        </ScrollReveal>
+        <ul className="mt-10 flex flex-col gap-4 md:mt-14 md:flex-row md:flex-wrap md:justify-center md:gap-5 3xl:mt-16 3xl:gap-6">
+          {items.map((c, i) => {
+            const meta = [c.date ? formatMonth(c.date) : "", c.credentialId ? `ID ${c.credentialId}` : ""].filter(Boolean);
+            const body = (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  {c.badge?.url ? (
+                    <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-[30%] border-[3px] border-white bg-white shadow-float 3xl:size-16">
+                      <SafeImg src={c.badge.url} loading="lazy" className="h-full w-full object-cover" fallback={<BadgeCheck size={24} strokeWidth={1.9} className="text-onyx" />} />
                     </span>
-                  ))}
-                </span>
-              </span>
-              <span className="justify-self-end">
-                {c.badge?.url ? (
-                  <span className="block size-10 overflow-hidden rounded-lg border border-white/10 bg-white/[0.06] sm:size-11">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={c.badge.url} alt="" loading="lazy" className="h-full w-full object-cover" />
-                  </span>
-                ) : c.credentialUrl ? (
-                  <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-white transition-transform duration-300 group-hover:rotate-45 sm:size-8 sm:bg-transparent">
-                    <ArrowUpRight size={20} aria-hidden />
-                  </span>
-                ) : (
-                  <span className="grid size-9 place-items-center rounded-full text-white/35 sm:size-8">
-                    <Award size={20} aria-hidden />
-                  </span>
+                  ) : (
+                    <span
+                      aria-hidden
+                      className={`grid size-14 shrink-0 -rotate-6 place-items-center rounded-[30%] border-[3px] border-white text-on-pop shadow-float 3xl:size-16 ${tileAt(i + 2)}`}
+                    >
+                      <BadgeCheck size={24} strokeWidth={1.9} />
+                    </span>
+                  )}
+                  {c.credentialUrl && (
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-onyx text-on-onyx shadow-cta transition-transform duration-300 group-hover:rotate-45 3xl:size-12">
+                      <ArrowUpRight size={18} strokeWidth={2.3} aria-hidden />
+                    </span>
+                  )}
+                </div>
+                <p className="mt-5 text-[13px] font-bold uppercase tracking-[0.12em] text-ash 3xl:text-[15px]">{c.issuer}</p>
+                <h3 className="mt-1.5 break-words text-[18px] font-bold leading-snug tracking-[-0.02em] text-onyx md:text-[20px] 3xl:text-[24px]">
+                  {c.title}
+                </h3>
+                {meta.length > 0 && (
+                  <p className="mt-auto flex flex-wrap gap-x-2 gap-y-1 pt-4 text-[13.5px] font-medium text-ash 3xl:text-[16px]">
+                    {meta.map((m, mi) => (
+                      <span key={mi} className="break-all">
+                        {mi > 0 && (
+                          <span aria-hidden className="mr-2 text-dust">
+                            ·
+                          </span>
+                        )}
+                        {m}
+                      </span>
+                    ))}
+                  </p>
                 )}
-              </span>
-            </>
-          );
-          const rowClass =
-            "grid min-h-[64px] w-full grid-cols-[32px_1fr_44px] items-center gap-2 px-4 py-5 text-left sm:grid-cols-[48px_1fr_48px] md:px-6 md:py-6";
-          return (
-            <ScrollReveal key={c.id} delay={Math.min(i * 0.04, 0.2)}>
-              <div className="border-b border-white/20 last:border-b-0">
-                {c.credentialUrl ? (
-                  <a
-                    href={c.credentialUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`${c.title} — view credential`}
-                    className={`group ${rowClass} transition-colors hover:bg-white/[0.04] active:bg-white/[0.06] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white`}
-                  >
-                    {inner}
-                  </a>
-                ) : (
-                  <div className={rowClass}>{inner}</div>
-                )}
-              </div>
-            </ScrollReveal>
-          );
-        })}
+              </>
+            );
+            const card =
+              "surface flex h-full flex-col rounded-[28px] p-5 md:rounded-[32px] md:p-7 3xl:rounded-[36px] 3xl:p-9";
+            return (
+              <li
+                key={c.id}
+                className={
+                  items.length === 1
+                    ? "md:w-full md:max-w-[620px]"
+                    : `md:w-[calc(50%-10px)] ${items.length >= 3 ? "3xl:w-[calc(33.333%-16px)]" : ""}`
+                }
+              >
+                <ScrollReveal delay={Math.min((i % 2) * 0.06, 0.12)} className="h-full">
+                  {c.credentialUrl ? (
+                    <a
+                      href={c.credentialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`${c.title} — view credential (opens in a new tab)`}
+                      className={`group ${card} rounded-[28px] transition-transform duration-500 hover:-translate-y-1`}
+                    >
+                      {body}
+                    </a>
+                  ) : (
+                    <div className={card}>{body}</div>
+                  )}
+                </ScrollReveal>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </section>
   );

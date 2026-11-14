@@ -5,6 +5,24 @@ import { useRef, useSyncExternalStore, type ReactNode } from "react";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+/* ---------- scrolling ---------- */
+
+/**
+ * Smooth-scroll the page to a y offset. The site's smooth-scroll engine
+ * (LenisProvider) claims the request when it is running; otherwise — e.g.
+ * for reduced motion — the browser scrolls natively.
+ */
+export function siteScrollTo(top: number) {
+  const claimed = !window.dispatchEvent(new CustomEvent("site:scroll", { detail: { top }, cancelable: true }));
+  if (!claimed) window.scrollTo({ top, behavior: "smooth" });
+}
+
+/** Freeze / release page scrolling (for sheets and dialogs). */
+export function setPageScrollLocked(locked: boolean) {
+  window.dispatchEvent(new CustomEvent(locked ? "site:lock" : "site:unlock"));
+  document.documentElement.style.overflow = locked ? "hidden" : "";
+}
+
 /* ---------- viewport ---------- */
 
 const MOBILE_QUERY = "(max-width: 767px)";
@@ -13,6 +31,29 @@ function subscribeMobile(onChange: () => void) {
   const mq = window.matchMedia(MOBILE_QUERY);
   mq.addEventListener("change", onChange);
   return () => mq.removeEventListener("change", onChange);
+}
+
+/** Live result of a media query. Server-renders as false; settles right after hydration. */
+export function useMedia(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(query);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
+}
+
+/**
+ * The visitor's reduced-motion preference, safe to branch markup on: false
+ * during server rendering and hydration (so both agree), then the real
+ * value. motion's own useReducedMotion reads it on the very first client
+ * render, which can disagree with the server HTML and leave it stale.
+ */
+export function useReducedMotionSafe(): boolean {
+  return useMedia("(prefers-reduced-motion: reduce)");
 }
 
 /** True below the md breakpoint. Server-renders as false; settles right after hydration. */
@@ -32,8 +73,8 @@ export function useIsMobile(): boolean {
 export function useReveal() {
   const mobile = useIsMobile();
   return mobile
-    ? { y: 32, yBody: 28, blur: "blur(4px)", duration: 0.7, ease: EASE }
-    : { y: 56, yBody: 48, blur: "blur(6px)", duration: 0.9, ease: EASE };
+    ? { y: 24, yBody: 22, blur: "blur(4px)", duration: 0.65, ease: EASE }
+    : { y: 36, yBody: 32, blur: "blur(6px)", duration: 0.85, ease: EASE };
 }
 
 /* ---------- reveals ---------- */
@@ -113,7 +154,7 @@ export function MagneticButton({
   className,
   href,
   target,
-  rounded = "rounded-[10px]",
+  rounded = "rounded-full",
 }: {
   children: ReactNode;
   className?: string;
@@ -130,7 +171,7 @@ export function MagneticButton({
       initial="rest"
       whileHover="hover"
       whileTap="tap"
-      className={`group inline-flex touch-manipulation ${rounded} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white`}
+      className={`group inline-flex touch-manipulation ${rounded} focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-onyx`}
     >
       <motion.span
         variants={{
@@ -168,6 +209,15 @@ export function ButtonIcon({
     </motion.span>
   );
 }
+
+/* ---------- buttons ---------- */
+
+/** The black pill — the site's one primary action shape. */
+export const BTN_BLACK =
+  "min-h-[52px] items-center justify-center gap-2.5 bg-onyx px-6 text-[15px] font-semibold text-on-onyx shadow-cta transition-[filter] duration-300 group-hover:brightness-110 sm:min-h-[56px] sm:px-7 sm:text-[16px] 3xl:min-h-[64px] 3xl:px-9 3xl:text-[18px]";
+/** The quiet partner: an off-white pill with a hairline. */
+export const BTN_LIGHT =
+  "min-h-[52px] items-center justify-center gap-2.5 border border-hairline bg-card px-6 text-[15px] font-semibold text-onyx shadow-pill transition-[filter] duration-300 group-hover:brightness-105 sm:min-h-[56px] sm:px-7 sm:text-[16px] 3xl:min-h-[64px] 3xl:px-9 3xl:text-[18px]";
 
 /* ---------- decoration ---------- */
 

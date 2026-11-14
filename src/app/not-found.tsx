@@ -1,82 +1,61 @@
 import Link from "next/link";
-import { Home, Mail } from "lucide-react";
+import { ArrowRight, Home } from "lucide-react";
+import { AVATAR, AvatarTile, Bubble, Eyebrow, OwnerAvatar } from "@/components/site/kit";
 
 export default function NotFound() {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0a0a0b] px-6 text-[#f4f4f5] selection:bg-[#ff5a1a]/30 selection:text-white">
-      {/* Background radial glow */}
+    <div data-palette="default" className="site relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-6 py-24 text-center">
       <div
-        className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[500px] w-[600px] -translate-x-1/2 rounded-full opacity-20 blur-[120px]"
-        style={{
-          background: "radial-gradient(circle, var(--color-accent, #ff5a1a) 0%, transparent 70%)",
-        }}
-        aria-hidden="true"
+        aria-hidden
+        className="absolute inset-0 -z-0"
+        style={{ background: "radial-gradient(110% 70% at 50% -10%, rgba(var(--glow), 0.95), rgba(var(--glow), 0) 70%)" }}
       />
 
-      {/* Subtle grid pattern */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"
-        aria-hidden="true"
-      />
+      <Link
+        href="/"
+        className="group absolute left-5 top-5 z-10 inline-flex items-center gap-2.5 rounded-full border border-hairline bg-card/80 py-1.5 pl-1.5 pr-4 text-[16px] font-extrabold tracking-[-0.03em] text-onyx shadow-pill backdrop-blur md:left-8 md:top-8"
+      >
+        <OwnerAvatar className="size-9" />
+        Navaneeth
+      </Link>
 
-      {/* Top Brand Link */}
-      <div className="absolute top-8 left-8">
-        <Link
-          href="/"
-          className="group inline-flex items-center gap-2.5 text-sm font-semibold tracking-tight text-white/80 transition-colors hover:text-white"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 font-bold text-white transition-transform group-hover:scale-105">
-            N<span className="text-[var(--color-accent,#ff5a1a)]">.</span>
-          </span>
-          <span>Navaneeth</span>
-        </Link>
-      </div>
-
-      <main className="relative mx-auto flex max-w-lg flex-col items-center text-center">
-        {/* Subtle large 404 watermark */}
-        <div
-          className="select-none text-[8rem] font-black leading-none tracking-tighter text-white/[0.04] sm:text-[11rem]"
-          aria-hidden="true"
-        >
-          404
+      <main className="relative z-10 flex max-w-xl flex-col items-center">
+        {/* the cast, looking around for the page */}
+        <div aria-hidden className="relative flex items-end">
+          <AvatarTile src={AVATAR.gus} tone="bg-tile-periwinkle" tilt={-9} border="border-4" className="size-20 md:size-24" />
+          <AvatarTile src={AVATAR.owner} tone="bg-tile-lemon" tilt={3} className="z-10 -mx-3 size-28 md:size-32">
+            <Bubble className="-top-6 left-1/2 -translate-x-1/2">Hmm… 🤔</Bubble>
+          </AvatarTile>
+          <AvatarTile src={AVATAR.rosa} tone="bg-tile-bubblegum" tilt={9} border="border-4" className="size-20 md:size-24" />
         </div>
 
-        <div className="-mt-16 sm:-mt-20">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-[var(--color-accent,#ff5a1a)]">
-            Error 404
-          </span>
+        <div className="mt-10">
+          <Eyebrow>Error 404</Eyebrow>
+        </div>
+        <h1 className="display mt-5 text-[clamp(40px,11vw,64px)]">
+          This page wandered off<span className="text-pop">.</span>
+        </h1>
+        <p className="mt-4 max-w-md text-[16px] leading-relaxed text-ash md:text-[18px]">
+          The page you&apos;re looking for doesn&apos;t exist, has moved, or the link may be broken.
+        </p>
 
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Page not found
-          </h1>
-
-          <p className="mt-3 text-sm leading-relaxed text-[#a1a1aa] sm:text-base">
-            The page you are looking for doesn&apos;t exist, has been removed, or the link may be broken.
-          </p>
-
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href="/"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition-all hover:bg-white/90 hover:shadow-lg hover:shadow-white/10 sm:w-auto"
-            >
-              <Home className="h-4 w-4" />
-              Return to Portfolio
-            </Link>
-
-            <Link
-              href="/#contact"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto"
-            >
-              <Mail className="h-4 w-4" />
-              Contact Me
-            </Link>
-          </div>
+        <div className="mt-9 flex w-full flex-col items-center gap-5 sm:w-auto sm:flex-row sm:gap-7">
+          <Link
+            href="/"
+            className="inline-flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-full bg-onyx px-7 text-[16px] font-semibold text-on-onyx shadow-cta transition-transform hover:-translate-y-0.5 sm:w-auto"
+          >
+            <Home size={18} aria-hidden /> Back to the portfolio
+          </Link>
+          <Link
+            href="/#contact"
+            className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-onyx underline decoration-onyx/30 decoration-2 underline-offset-[6px] hover:decoration-onyx"
+          >
+            Say hi instead <ArrowRight size={17} aria-hidden />
+          </Link>
         </div>
       </main>
 
-      <footer className="absolute bottom-6 text-center text-xs text-[#71717a]">
-        © {new Date().getFullYear()} Navaneeth. All rights reserved.
-      </footer>
+      <footer className="absolute bottom-6 z-10 text-[13px] text-ash">© {new Date().getFullYear()} Navaneeth. All rights reserved.</footer>
     </div>
   );
 }

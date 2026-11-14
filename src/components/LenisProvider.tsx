@@ -31,8 +31,25 @@ export function LenisProvider({ children }: { children: React.ReactNode }) {
     };
     document.addEventListener("click", onClick);
 
+    // Programmatic scrolls (the mascot) and scroll locks (project sheets)
+    // come in as window events so components never need the instance.
+    const onScrollRequest = (e: Event) => {
+      const top = (e as CustomEvent<{ top: number }>).detail?.top;
+      if (typeof top !== "number") return;
+      e.preventDefault();
+      lenis.scrollTo(top);
+    };
+    const onLock = () => lenis.stop();
+    const onUnlock = () => lenis.start();
+    window.addEventListener("site:scroll", onScrollRequest);
+    window.addEventListener("site:lock", onLock);
+    window.addEventListener("site:unlock", onUnlock);
+
     return () => {
       document.removeEventListener("click", onClick);
+      window.removeEventListener("site:scroll", onScrollRequest);
+      window.removeEventListener("site:lock", onLock);
+      window.removeEventListener("site:unlock", onUnlock);
       lenis.destroy();
     };
   }, []);

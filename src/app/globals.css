@@ -1,23 +1,121 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #09090b;
-  --color-bg-alt: #131313;
-  --color-bg-deep: #000000;
-  --color-card: #161616;
-  --color-border: rgba(255, 255, 255, 0.09);
-  --color-text-mute: rgba(255, 255, 255, 0.62);
-  --color-text-sub: rgba(255, 255, 255, 0.82);
-  --color-accent: #ff4a1a;
-  --color-melt-tint: #3a0f06;
-  --color-cream: #f5f1ea;
+/* ————————————————————————————————————————————————————————————————
+   "Conversation" design system — warm cream canvas, off-white cards with
+   hairline borders and soft diffused shadows, pastel tints, black pill
+   CTAs and Notion-style line-art avatars on rotated pastel tiles.
+   Every colour is a var() so the theme picked in the studio (applied as
+   custom properties on the site wrapper) re-colours the whole page.
+   ———————————————————————————————————————————————————————————————— */
 
-  --font-display: var(--font-display-next), "Inter Tight", "Inter", system-ui, sans-serif;
-  --font-body: var(--font-sans-next), "Inter", system-ui, sans-serif;
-  --font-heading: var(--font-display-next), "Inter Tight", "Inter", system-ui, sans-serif;
-  --font-script: var(--font-script-next), "Great Vibes", cursive;
+/* short laptop screens (e.g. 1280×720, 1366×768): tighter vertical rhythm */
+@custom-variant short (@media (max-height: 820px));
+
+@theme {
+  /* a dedicated large-monitor tier above 2xl */
+  --breakpoint-3xl: 120rem;
+
+  /* legacy tokens — the content studio overrides these under .theme-studio */
+  --color-bg: #f5f0e6;
+  --color-accent: #121211;
+
+  /* Theme tokens. These are the "Sunny Butter" defaults; the site wrapper
+     overrides every one of them with the theme picked in the studio
+     (lib/palettes → themeStyle). */
+  --color-canvas: #f5f0e6;
+  --color-canvas-deep: #ede5d6;
+  --color-card: #fffdf8;
+  --color-well: #f4efe4;
+  --color-hairline: rgb(20 18 12 / 0.08);
+  --color-onyx: #121211;
+  --color-on-onyx: #ffffff;
+  --color-ash: #5b5750;
+  --color-dust: #8c867c;
+  --color-pop: #f5c542;
+  --color-pop-soft: #fbedb9;
+  --color-pop-ink: #8a6100;
+  --color-on-pop: #121211; /* text on an accent fill — dark in every theme */
+  --color-lavender: #e2e3fc;
+  --color-butter: #fbeaaa;
+  --color-mint: #dcf1d5;
+  --color-blush: #f8dceb;
+  --color-sky: #dcebfb;
+  --color-peach: #fde3d3;
+
+  /* pastel tiles — avatar & icon squircles; the same "stickers" in every theme */
+  --color-tile-periwinkle: #c9cdf9;
+  --color-tile-lemon: #f8df8b;
+  --color-tile-seafoam: #c5f0d8;
+  --color-tile-bubblegum: #f4cbe6;
+  --color-tile-orchid: #d9b8f7;
+  --color-tile-apricot: #ffd1b6;
+
+  --font-display: var(--font-jakarta-next), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: var(--font-jakarta-next), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-heading: var(--font-jakarta-next), "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --shadow-card:
+    inset 0 1px 0 0 rgb(var(--highlight)), 0 30px 60px -38px rgb(var(--shade) / calc(0.28 * var(--shade-k))),
+    0 4px 14px -8px rgb(var(--shade) / calc(0.1 * var(--shade-k)));
+  --shadow-float:
+    0 22px 40px -18px rgb(var(--shade) / calc(0.35 * var(--shade-k))),
+    0 4px 10px -4px rgb(var(--shade) / calc(0.12 * var(--shade-k)));
+  --shadow-pill: 0 8px 18px -12px rgb(var(--shade) / calc(0.35 * var(--shade-k)));
+  --shadow-cta: 0 18px 32px -16px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.14);
+
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-sway: sway 6s ease-in-out infinite;
+  --animate-typing: typing 1.2s ease-in-out infinite;
+  --animate-wave: wave 2.4s ease-in-out infinite;
+  --animate-blink: blink 4.5s ease-in-out infinite;
 }
 
+/* the non-colour theme knobs (defaults = Sunny Butter) */
+:root {
+  --glow: 247, 224, 150;
+  --shade: 64 48 16;
+  --shade-k: 1;
+  --highlight: 255 255 255 / 0.9;
+}
+
+/* ---------- the public site wrapper ---------- */
+.site {
+  --font-heading: var(--font-jakarta-next), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: var(--font-jakarta-next), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: var(--font-jakarta-next), "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: var(--font-body);
+  background: var(--color-canvas);
+  color: var(--color-onyx);
+}
+.site ::selection {
+  background: var(--color-pop-soft);
+  color: var(--color-onyx);
+}
+
+/* the big, tight, heavy headline voice */
+@utility display {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: -0.052em;
+  line-height: 0.98;
+  color: var(--color-onyx);
+  text-wrap: balance;
+}
+/* an off-white card on the cream canvas */
+@utility surface {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-hairline);
+  box-shadow: var(--shadow-card);
+}
+/* hide a scroller's bar but keep it scrollable */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------- smooth scroll (lenis) ---------- */
 html.lenis,
 html.lenis body {
   height: auto;
@@ -42,102 +140,105 @@ html {
 }
 
 body {
-  background: var(--color-bg);
-  color: #fff;
+  background: var(--color-canvas);
+  color: var(--color-onyx);
   font-family: var(--font-body);
   overflow-x: hidden;
 }
 
 ::selection {
-  background: #ff4a1a;
-  color: #fff;
+  background: #fbedb9;
+  color: #121211;
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: color-mix(in oklab, var(--color-onyx) 22%, transparent);
   border-radius: 99px;
 }
 
-/* ---------- utilities ---------- */
-.font-script {
-  font-family: var(--font-script);
+/* ---------- long words ---------- */
+/* A pasted URL or a very long word in CMS text breaks instead of pushing the layout sideways. */
+.site :is(main, footer, [role="dialog"]) :is(p, h1, h2, h3, h4, li, blockquote, figcaption, dd, dt) {
+  overflow-wrap: anywhere;
 }
 
-.text-stroke-ghost {
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.14);
-  color: transparent;
-}
-
-.ghost-huge {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  line-height: 0.85;
-  letter-spacing: -0.04em;
-  color: rgba(255, 255, 255, 0.17);
-  user-select: none;
-  pointer-events: none;
-}
-
-.vertical-lines {
-  background-image: repeating-linear-gradient(
-    to right,
-    transparent 0,
-    transparent calc(100% / 6 - 1px),
-    rgba(255, 255, 255, 0.07) calc(100% / 6 - 1px),
-    rgba(255, 255, 255, 0.07) calc(100% / 6)
-  );
-}
-
-/* Giant "Rohit" slow vertical sheen — matches the Framer hero:
-   grey gradient top <-> full white, ~4s loop with holds at each end */
-.name-sheen {
-  background-image: linear-gradient(
-    to bottom,
-    #737373 0%,
-    #c6c6c6 13%,
-    #ffffff 24%,
-    #ffffff 100%
-  );
-  background-size: 100% 200%;
-  background-repeat: no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: name-sheen 4s ease-in-out infinite;
-}
-@keyframes name-sheen {
+/* ---------- motion ---------- */
+@keyframes float {
   0%,
-  32% {
-    background-position: 50% 0%;
-  }
-  50%,
-  82% {
-    background-position: 50% 100%;
-  }
   100% {
-    background-position: 50% 0%;
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .name-sheen {
-    animation: none;
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-2.5deg);
   }
-  .animate-marquee,
-  .animate-marquee-fast,
-  .animate-marquee-rev,
-  .animate-marquee-slow {
-    animation: none;
+  50% {
+    transform: rotate(2.5deg);
   }
 }
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+@keyframes wave {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  10%,
+  30% {
+    transform: rotate(16deg);
+  }
+  20%,
+  40% {
+    transform: rotate(-8deg);
+  }
+}
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes jiggle {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+.hover-jiggle:hover {
+  animation: jiggle 0.32s ease-in-out infinite;
+}
 
-/* marquees */
+/* marquees (kept for any legacy component) */
 @keyframes marquee {
   from {
     transform: translateX(0);
@@ -146,218 +247,81 @@ body {
     transform: translateX(-50%);
   }
 }
-@keyframes marquee-rev {
-  from {
-    transform: translateX(-50%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
 .animate-marquee {
   animation: marquee 28s linear infinite;
 }
-.animate-marquee-fast {
-  animation: marquee 20s linear infinite;
-}
-.animate-marquee-rev {
-  animation: marquee-rev 32s linear infinite;
-}
-.animate-marquee-slow {
-  animation: marquee 48s linear infinite;
-}
-.marquee-paused:hover .animate-marquee,
-.marquee-paused:hover .animate-marquee-fast,
-.marquee-paused:hover .animate-marquee-rev,
-.marquee-paused:hover .animate-marquee-slow,
-.marquee-paused:focus-within .animate-marquee,
-.marquee-paused:focus-within .animate-marquee-fast,
-.marquee-paused:focus-within .animate-marquee-rev,
-.marquee-paused:focus-within .animate-marquee-slow {
-  animation-play-state: paused;
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-sway,
+  .animate-typing,
+  .animate-wave,
+  .animate-blink,
+  .animate-marquee,
+  .hover-jiggle:hover {
+    animation: none !important;
+  }
 }
 
 /* consistent, visible keyboard focus everywhere */
 :where(a, button, input, select, textarea):focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline: 2px solid var(--color-onyx);
   outline-offset: 3px;
-  border-radius: 6px;
-}
-
-/* Scale down the top navbar by 15% exclusively on Small laptop (1280x800) screens */
-@media (min-width: 1250px) and (max-width: 1439px) {
-  .nav-small-laptop-scale {
-    transform: scale(0.85);
-    transform-origin: top center;
-  }
-}
-
-/* grain */
-.noise::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.5;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
-}
-
-@keyframes journey-img-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(24px);
-    filter: blur(8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    filter: blur(0);
-  }
-}
-
-@keyframes preloader-bar {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
+  border-radius: 999px;
 }
 
 /* ————————————————————————————————————————————————————————————————
-   Curated Color Palettes (Studio → Site Settings → Color Palette)
-   Token-based visual layer preserving layout, typography & motion
-   ———————————————————————————————————————————————————————————————— */
-:root,
-[data-palette="default"] {
-  --color-bg: #09090b;
-  --color-bg-alt: #131313;
-  --color-card: #161616;
-  --color-border: rgba(255, 255, 255, 0.09);
-  --color-text-mute: rgba(255, 255, 255, 0.62);
-  --color-text-sub: rgba(255, 255, 255, 0.82);
-  --color-accent: #ff4a1a;
-  --color-accent-glow: #ff5a1a;
-  --color-glow-rgb: 255, 74, 26;
-  --color-melt-tint: #3a0f06;
-  --font-heading-tracking: -0.025em;
-}
-[data-palette="graphite"] {
-  --color-bg: #0a0b0d;
-  --color-bg-alt: #14161a;
-  --color-card: #181b20;
-  --color-border: rgba(255, 255, 255, 0.12);
-  --color-text-mute: rgba(255, 255, 255, 0.65);
-  --color-text-sub: rgba(255, 255, 255, 0.88);
-  --color-accent: #f1f5f9;
-  --color-accent-glow: #94a3b8;
-  --color-glow-rgb: 241, 245, 249;
-  --color-melt-tint: #181f2a;
-  --font-heading-tracking: -0.015em;
-}
-[data-palette="midnight"] {
-  --color-bg: #040711;
-  --color-bg-alt: #0b1021;
-  --color-card: #0f172a;
-  --color-border: rgba(56, 189, 248, 0.14);
-  --color-text-mute: rgba(224, 242, 254, 0.62);
-  --color-text-sub: rgba(224, 242, 254, 0.84);
-  --color-accent: #38bdf8;
-  --color-accent-glow: #0284c7;
-  --color-glow-rgb: 56, 189, 248;
-  --color-melt-tint: #061d36;
-  --font-heading-tracking: -0.02em;
-}
-[data-palette="emerald"] {
-  --color-bg: #040d08;
-  --color-bg-alt: #08170f;
-  --color-card: #0d2217;
-  --color-border: rgba(52, 211, 153, 0.14);
-  --color-text-mute: rgba(209, 250, 229, 0.62);
-  --color-text-sub: rgba(209, 250, 229, 0.84);
-  --color-accent: #10b981;
-  --color-accent-glow: #059669;
-  --color-glow-rgb: 16, 185, 129;
-  --color-melt-tint: #062819;
-  --font-heading-tracking: -0.02em;
-}
-[data-palette="warm-clay"] {
-  --color-bg: #0d0a08;
-  --color-bg-alt: #17120e;
-  --color-card: #1f1914;
-  --color-border: rgba(251, 191, 36, 0.12);
-  --color-text-mute: rgba(254, 243, 199, 0.60);
-  --color-text-sub: rgba(254, 243, 199, 0.82);
-  --color-accent: #f59e0b;
-  --color-accent-glow: #d97706;
-  --color-glow-rgb: 245, 158, 11;
-  --color-melt-tint: #331b0c;
-  --font-heading-tracking: -0.015em;
-}
-[data-palette="editorial-crimson"] {
-  --color-bg: #0a0607;
-  --color-bg-alt: #150c0e;
-  --color-card: #1c1013;
-  --color-border: rgba(244, 63, 94, 0.14);
-  --color-text-mute: rgba(255, 228, 230, 0.60);
-  --color-text-sub: rgba(255, 228, 230, 0.82);
-  --color-accent: #f43f5e;
-  --color-accent-glow: #e11d48;
-  --color-glow-rgb: 244, 63, 94;
-  --color-melt-tint: #360a16;
-  --font-heading-tracking: -0.025em;
-}
-
-/* ————————————————————————————————————————————————————————————————
-   Content studio (/studio) — a light, form-first workspace. Its palette is
-   scoped under .theme-studio so the public site's dark tokens above are
-   untouched: every color utility resolves its var() at point of use, so
-   `bg-bg` / `text-accent` mean the light values only inside the studio.
+   Content studio (/studio) — the same cream language as the site: warm
+   canvas, off-white cards with hairline borders, black pills, Jakarta.
+   Its tokens are scoped under .theme-studio so they never leak into the
+   public site, and the studio never changes theme with the site.
    ———————————————————————————————————————————————————————————————— */
 @theme {
-  --color-surface: #ffffff;
-  --color-ink: #0b0d10;
-  --color-muted: #687280;
-  --color-line: #e6e4df;
-  --color-accent-soft: #ffe9e1;
-  --color-accent-ink: #b3300c;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #dc2626;
-  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --color-surface: #fffdf8;
+  --color-ink: #121211;
+  --color-muted: #6b665d;
+  --color-line: #e9e2d4;
+  --color-accent-soft: #fbedb9;
+  --color-accent-ink: #8a6100;
+  --color-success: #1e7a48;
+  --color-warning: #a35b00;
+  --color-danger: #c4291c;
+  --shadow-pop: 0 18px 40px -16px rgb(40 30 10 / 0.35);
 }
 
 .theme-studio {
-  --color-bg: #f7f6f3;
-  --color-accent: #ff4a1a;
+  --color-bg: #f5f0e6;
+  --color-accent: #121211;
   color-scheme: light;
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-body);
+  font-family: var(--font-jakarta-next), "Plus Jakarta Sans", system-ui, sans-serif;
 }
 .theme-studio ::selection {
   background: var(--color-accent-soft);
-  color: var(--color-accent-ink);
+  color: var(--color-ink);
 }
 .theme-studio ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.16);
 }
-/* the site's white focus ring is invisible on the light studio */
 .theme-studio :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-ink);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 10px;
 }
 .theme-studio .utility {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-muted);
 }
 .theme-studio .card {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: 24px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+  border-radius: 28px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 24px 50px -36px rgb(64 48 16 / 0.3),
+    0 3px 10px -6px rgb(64 48 16 / 0.08);
 }

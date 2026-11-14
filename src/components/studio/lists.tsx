@@ -88,7 +88,7 @@ export function EntityList<T extends { id: string }>({
   return (
     <div className="space-y-3">
       {items.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
+        <p className="rounded-[22px] border border-dashed border-line bg-surface/50 px-4 py-6 text-center text-sm text-muted">
           {emptyLabel}
         </p>
       )}
@@ -96,14 +96,14 @@ export function EntityList<T extends { id: string }>({
         const title = itemTitle(item).trim() || "Untitled";
         const expanded = open[item.id] ?? false;
         return (
-          <div key={item.id} className="rounded-2xl border border-line bg-surface">
+          <div key={item.id} className="rounded-[22px] border border-line bg-surface shadow-[0_10px_30px_-24px_rgb(64_48_16/0.35)]">
             <div className="flex items-center gap-2 px-3 py-2.5">
               <MoveButtons index={index} count={items.length} label={title} onMove={move} />
               <button
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => setOpen((o) => ({ ...o, [item.id]: !expanded }))}
-                className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition-colors duration-200 hover:bg-bg"
+                className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full px-3 py-1.5 text-left transition-colors duration-200 hover:bg-bg"
               >
                 <span className="truncate text-sm font-semibold">{title}</span>
                 <ChevronDown
@@ -139,7 +139,7 @@ export function EntityList<T extends { id: string }>({
           type="button"
           disabled={full}
           onClick={add}
-          className="inline-flex items-center gap-1.5 rounded-[14px] border border-line bg-surface px-4 py-2 text-sm font-medium transition-colors duration-200 hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
           {addLabel}
@@ -179,7 +179,7 @@ export function StringListEditor({
   };
   const full = values.length >= maxItems;
   const inputClass =
-    "w-full rounded-[12px] border border-line bg-surface px-3.5 py-2.5 text-sm transition-colors duration-200 focus:border-accent focus:outline-none";
+    "w-full rounded-[14px] border border-line bg-surface px-4 py-2.5 text-[15px] transition-[border-color,box-shadow] duration-200 focus:border-ink focus:shadow-[0_0_0_4px_rgb(251_237_185/0.9)] focus:outline-none";
 
   return (
     <FieldShell
@@ -241,7 +241,7 @@ export function StringListEditor({
           type="button"
           disabled={full}
           onClick={() => onChange([...values, ""])}
-          className="inline-flex items-center gap-1.5 rounded-[12px] border border-dashed border-line px-3.5 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-line px-4 py-2 text-sm font-semibold text-muted transition-colors duration-200 hover:border-ink/30 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
           {addLabel}

@@ -1,5 +1,6 @@
 import { getPublishedSite } from "@/lib/published";
 import { getEffectiveSeo } from "@/lib/seo";
+import { formatRange } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ ${stats.length > 0 ? `## Key Metrics\n${stats.map((s) => `- **${s.value || "•"
 ${experience
   .map(
     (exp) => `### ${exp.role} — ${exp.company}
-Period: ${exp.startDate} – ${exp.endDate}
+Period: ${formatRange(exp.startDate, exp.endDate) || "—"}
 ${exp.bullets.map((b) => `- ${b}`).join("\n")}
 ${exp.highlight ? `**Key Highlight:** ${exp.highlight}` : ""}
 ${exp.tags && exp.tags.length > 0 ? `**Focus:** ${exp.tags.join(", ")}` : ""}`,
@@ -83,7 +84,7 @@ ${tools.map((t) => `- **${t.name}**: ${t.level}`).join("\n")}
 
 ${certs.length > 0 ? `## Certifications\n${certs.map((c) => `- **${c.title}** (${c.issuer})${c.credentialId ? ` · ID: ${c.credentialId}` : ""}${c.credentialUrl ? ` · ${c.credentialUrl}` : ""}`).join("\n")}\n` : ""}
 
-${education.length > 0 ? `## Education\n${education.map((e) => `- **${e.degree}** · ${e.institution ?? "University"} (${e.startYear} – ${e.endYear})`).join("\n")}\n` : ""}
+${education.length > 0 ? `## Education\n${education.map((e) => `- **${e.degree}**${e.institution ? ` · ${e.institution}` : ""}${[e.startYear, e.endYear].filter(Boolean).length ? ` (${[e.startYear, e.endYear].filter(Boolean).join(" – ")})` : ""}`).join("\n")}\n` : ""}
 
 ## Technical Architecture & Credits
 This high-performance portfolio and custom headless CMS were designed and developed by **${seo.developer.name}**.

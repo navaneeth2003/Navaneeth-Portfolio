@@ -1,15 +1,17 @@
 import type { Section, SectionType, SiteContent } from "@/lib/types";
 import { renderableSections, SECTION_LABELS } from "@/lib/types";
 import { getBannerStripItems } from "@/lib/marquee";
+import { CAST, OWNER_WAVE, contactVoices, heroVoices } from "@/lib/chatter";
+import { getTheme, themeStyle } from "@/lib/palettes";
 import { sanitizeContent } from "@/lib/urls";
-import { Navbar, type NavCta, type NavLink } from "@/components/Navbar";
+import { normalizeContent } from "@/lib/normalize";
+import { Navbar, type NavLink } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { AboutIntro } from "@/components/AboutIntro";
 import { Projects } from "@/components/Projects";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
-import { SiteCanvas } from "@/components/SiteCanvas";
-import { Preloader } from "@/components/Preloader";
+import { Preloader, type SplashMember } from "@/components/Preloader";
 import type { StripItem } from "@/components/LogoStrip";
 import { StatsSection } from "./StatsSection";
 import { ExperienceSection } from "./ExperienceSection";
@@ -17,15 +19,14 @@ import { ToolsSection } from "./ToolsSection";
 import { SkillsSection } from "./SkillsSection";
 import { CertificationsSection } from "./CertificationsSection";
 import { EducationSection } from "./EducationSection";
-import { JourneyFlow } from "./JourneyFlow";
 import { SiteProviders } from "./SiteProviders";
 import { CustomSection } from "./CustomSection";
 
-function renderSection(section: Section, categories?: string[]) {
+function renderSection(section: Section, ownerName: string, ownerPhoto: string, categories?: string[]) {
   const title = section.label?.trim() || SECTION_LABELS[section.type];
   switch (section.type) {
     case "about":
-      return <AboutIntro key="about" data={section.data} />;
+      return <AboutIntro key="about" data={section.data} photo={ownerPhoto} name={ownerName} />;
     case "stats":
       return <StatsSection key="stats" items={section.items} />;
     case "experience":
@@ -41,12 +42,13 @@ function renderSection(section: Section, categories?: string[]) {
     case "education":
       return <EducationSection key="education" title={title} items={section.items} />;
     case "custom":
-      return <CustomSection key={section.id} title={title} data={section.data} />;
+      // no placeholder title: only the label the owner set, if any
+      return <CustomSection key={section.id} title={section.label?.trim() || ""} data={section.data} />;
   }
 }
 
-// The pill nav holds five links like the reference (Home · three sections ·
-// Contact). Which three: the first present in this priority, shown in page order.
+// The nav holds five links (Home · three sections · Contact). Which three:
+// the first present in this priority, shown in page order.
 const NAV_PRIORITY: SectionType[] = [
   "projects",
   "experience",
@@ -71,7 +73,8 @@ export function PublicSite({
   preloader?: boolean;
 }) {
   // Every owner-typed URL passes one gate before it can become an href or src.
-  const content = sanitizeContent(raw);
+  // …after the content is repaired into a well-formed shape, whatever was stored.
+  const content = sanitizeContent(normalizeContent(raw));
   const { hero } = content;
   // Only the channels the site actually shows reach the client components —
   // a legacy phone number stays in the stored document but never in the page.
@@ -83,6 +86,9 @@ export function PublicSite({
   const sections = renderableSections(content);
   const present = new Set(sections.map((s) => s.type));
 
+  // Contact (and every "Let's talk") only appears when there is a way to reach him.
+  const reachable = Boolean(content.contact.email.trim() || content.contact.linkedinUrl?.trim() || content.contact.resumeUrl?.trim());
+
   const middle = NAV_PRIORITY.filter((t) => present.has(t)).slice(0, 3);
   const links: NavLink[] = [
     { id: "hero", href: "#hero", label: "Home" },
@@ -93,43 +99,72 @@ export function PublicSite({
         href: s.type === "custom" ? `#sec-${s.id}` : `#${s.type}`,
         label: s.label?.trim() || (s.type === "projects" ? "Work" : SECTION_LABELS[s.type]),
       })),
-    { id: "contact", href: "#contact", label: "Contact" },
+    ...(reachable ? [{ id: "contact", href: "#contact", label: "Contact" }] : []),
   ];
-  // The nav's one CTA is the resume. No resume URL in the studio → no CTA,
-  // never a placeholder link.
-  const resumeUrl = contact.resumeUrl?.trim();
-  const cta: NavCta | null = resumeUrl ? { href: resumeUrl, label: "Resume", external: true } : null;
-  const brand = hero.name.trim().split(/\s+/)[0] || hero.name;
 
-  // The hero's running banner: the studio's company list, or — until the
+  // Data the hero derives instead of hard-coding: where he works now (an
+  // Experience entry that runs to "present") and whether there is work to show.
+  const experience = sections.find((s) => s.type === "experience");
+  const nowAt =
+    experience?.type === "experience"
+      ? experience.items.find((e) => e.endDate === "present")?.company?.trim() || null
+      : null;
+  const workHref = present.has("projects") ? "#projects" : null;
+
   const strip: StripItem[] = getBannerStripItems(content);
+  const resumeUrl = contact.resumeUrl?.trim() || null;
+  // The little portrait beside the name (nav, footer): the avatar, else the photo, else the illustration.
+  const avatar = hero.avatar?.url || hero.photo.url || undefined;
+
+  const theme = getTheme(content.settings?.palette);
+
+  // The hero's cast, gathering on the splash screen (him in the middle).
+  const voices = heroVoices(content);
+  const splash: SplashMember[] = voices.slice(0, 5).map((v) => {
+    const cast = CAST[v.avatar] ?? CAST.gus;
+    return { src: v.avatar === "owner" ? hero.photo.url || OWNER_WAVE : cast.src, tone: cast.tone };
+  });
 
   return (
     <SiteProviders>
-      {preloader && <Preloader name={hero.name} subtitle={hero.tagline} />}
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[95] focus:rounded-full focus:bg-[#f2eee7] focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-black"
-      >
-        Skip to content
-      </a>
+      {/* the browser canvas behind the page (overscroll, safe areas) follows the theme */}
+      <style>{`html,body{background:${theme.colors.canvas};color-scheme:${theme.mode}}`}</style>
       <div
-        data-palette={content.settings?.palette || "default"}
-        className="relative min-h-screen bg-[var(--color-bg,#070708)] text-white transition-colors duration-500"
+        data-palette={theme.id}
+        data-theme-mode={theme.mode}
+        style={themeStyle(theme.id)}
+        className="site relative min-h-screen overflow-x-clip transition-colors duration-500"
       >
-        {/* single continuous background canvas — all sections sit transparent over it */}
-        <SiteCanvas palette={content.settings?.palette} />
-        <div className="relative">
-          <Navbar links={links} brand={brand} cta={cta} />
-          <main id="main" className="relative">
-            {/* the journey line: Experience → Projects → Tools, behind the sections' content */}
-            <JourneyFlow />
-            <Hero hero={hero} contact={contact} strip={strip} />
-            {sections.map((s) => renderSection(s, content.settings?.projectCategories))}
-            <Contact contact={contact} />
-          </main>
-          <Footer name={hero.name} contact={contact} settings={content.settings} />
-        </div>
+        {preloader && <Preloader name={hero.name} cast={splash} />}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[95] focus:rounded-full focus:bg-onyx focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-on-onyx"
+        >
+          Skip to content
+        </a>
+        <Navbar links={links} name={hero.name} avatar={avatar} resumeUrl={resumeUrl} talk={reachable} />
+        <main id="main" className="relative">
+          <Hero
+            hero={hero}
+            contact={contact}
+            strip={strip}
+            nowAt={nowAt}
+            workHref={workHref}
+            voices={voices}
+            talk={reachable}
+            intro={preloader ? 1.75 : 0}
+          />
+          {sections.map((s) => renderSection(s, hero.name, hero.photo.url, content.settings?.projectCategories))}
+          {reachable && <Contact contact={contact} name={hero.name} photo={hero.photo.url || undefined} voices={contactVoices(content)} />}
+        </main>
+        <Footer
+          name={hero.name}
+          avatar={avatar}
+          tagline={hero.tagline.trim()}
+          contact={contact}
+          settings={content.settings}
+          links={links}
+        />
       </div>
     </SiteProviders>
   );

@@ -2,6 +2,7 @@ import { HISTORY_LIMIT } from "./limits";
 import { SEED_CONTENT } from "./seed";
 import { getSupabase } from "./supabase";
 import type { HistoryEntry, SiteContent, SiteDocument } from "./types";
+import { normalizeContent } from "./normalize";
 
 // The whole site lives in one row of the `site` table (id = 'main'):
 // draft / published / history as jsonb, plus version and published_at.
@@ -19,13 +20,14 @@ type SiteRow = {
   history: HistoryEntry[];
 };
 
+/** The stored row, repaired so the studio never opens on a malformed document. */
 function rowToDoc(row: SiteRow): SiteDocument {
   return {
-    draft: row.draft,
-    published: row.published,
-    version: row.version,
+    draft: normalizeContent(row.draft),
+    published: normalizeContent(row.published),
+    version: typeof row.version === "number" ? row.version : 1,
     publishedAt: row.published_at,
-    history: row.history ?? [],
+    history: (Array.isArray(row.history) ? row.history : []).map((h) => ({ ...h, content: normalizeContent(h?.content) })),
   };
 }
 

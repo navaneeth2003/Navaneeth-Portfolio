@@ -135,7 +135,7 @@ export function ImageField({
             type="button"
             disabled={!enabled}
             onClick={() => fileInput.current?.click()}
-            className="rounded-[12px] border border-line bg-surface px-3.5 py-2 text-sm font-medium transition-colors duration-200 hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-medium transition-colors duration-200 hover:border-ink/30 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {hasImage ? "Replace image" : "Upload image"}
           </button>
@@ -143,7 +143,7 @@ export function ImageField({
             <button
               type="button"
               onClick={() => onChange(image ? { ...image, url: "" } : undefined)}
-              className="inline-flex items-center gap-1.5 rounded-[12px] px-2.5 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-danger"
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-danger"
             >
               <Trash2 className="h-4 w-4" strokeWidth={2} />
               Remove
@@ -191,7 +191,7 @@ export function ImageField({
                 step={0.01}
                 value={zoom}
                 onChange={(e) => setZoom(Number(e.target.value))}
-                className="w-full accent-[#ff4a1a]"
+                className="w-full accent-[#121211]"
               />
             </label>
             <div className="mt-5 flex justify-end gap-2">
@@ -199,7 +199,7 @@ export function ImageField({
                 type="button"
                 disabled={busy}
                 onClick={closeCropper}
-                className="rounded-[12px] px-4 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-ink"
+                className="rounded-full px-4 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:text-ink"
               >
                 Cancel
               </button>
@@ -207,7 +207,7 @@ export function ImageField({
                 type="button"
                 disabled={busy || !area}
                 onClick={confirmCrop}
-                className="rounded-[12px] bg-ink px-4 py-2 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
+                className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
               >
                 {busy ? "Uploading…" : "Crop & upload"}
               </button>

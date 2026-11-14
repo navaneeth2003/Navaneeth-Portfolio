@@ -1,5 +1,5 @@
 import type { DeveloperCredit, ProjectItem, Section, SiteContent } from "./types";
-import { safeImageUrl, safeLinkUrl } from "./urls";
+import { absoluteUrl, safeImageUrl, safeLinkUrl } from "./urls";
 
 export const DEFAULT_DEVELOPER: DeveloperCredit = {
   enabled: true,
@@ -44,9 +44,10 @@ export function getEffectiveSeo(content: SiteContent): EffectiveSeo {
   const custom = content.settings?.seo;
   const hero = content.hero;
 
-  const title = (custom?.metaTitle?.trim()) || `${hero.name} — ${hero.tagline}`;
+  const title = custom?.metaTitle?.trim() || [hero.name.trim(), hero.tagline.trim()].filter(Boolean).join(" — ") || "Portfolio";
   const description = (custom?.metaDescription?.trim()) || hero.shortBio;
-  const canonicalUrl = safeLinkUrl(custom?.canonicalUrl) || DEFAULT_CANONICAL_URL;
+  // Must be absolute: it becomes metadataBase (new URL) and the sitemap's base — a path like "/" would break both.
+  const canonicalUrl = absoluteUrl(custom?.canonicalUrl) || DEFAULT_CANONICAL_URL;
 
   let twitterHandle = custom?.twitterHandle?.trim() || DEFAULT_TWITTER_HANDLE;
   if (!twitterHandle.startsWith("@") && !twitterHandle.startsWith("http")) {
@@ -92,8 +93,9 @@ export function getEffectiveSeo(content: SiteContent): EffectiveSeo {
     keywords,
     googleVerification: custom?.googleVerification?.trim() || undefined,
     bingVerification: custom?.bingVerification?.trim() || undefined,
-    gaMeasurementId: custom?.gaMeasurementId?.trim() || undefined,
-    clarityProjectId: custom?.clarityProjectId?.trim() || undefined,
+    // Both IDs are pasted into inline scripts: keep only the characters a real ID has.
+    gaMeasurementId: custom?.gaMeasurementId?.replace(/[^A-Za-z0-9-]/g, "") || undefined,
+    clarityProjectId: custom?.clarityProjectId?.replace(/[^A-Za-z0-9]/g, "") || undefined,
     geoRegion,
     geoPlacename,
     geoPosition: DEFAULT_GEO_POSITION,

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CHAR_LIMITS, ITEM_LIMITS } from "@/lib/limits";
 import { getBannerCompanies, type BannerCompanyItem } from "@/lib/marquee";
-import { COLOR_PALETTES } from "@/lib/palettes";
+import { getPalette } from "@/lib/palettes";
 import type {
   About,
   CertificationItem,
@@ -29,7 +29,6 @@ import { PROFICIENCY_LEVELS, PROJECT_VERTICALS, SECTION_LABELS } from "@/lib/typ
 import {
   BarChart3,
   Building2,
-  Check,
   ChevronDown,
   ChevronUp,
   Eye,
@@ -87,6 +86,20 @@ export function HeroForm({ hero, onChange }: { hero: Hero; onChange: (h: Hero) =
         pathPrefix="hero-photo"
         onChange={(photo) => onChange({ ...hero, photo: photo ?? { url: "", aspectRatio: "1:1" } })}
       />
+      <div>
+        <ImageField
+          label="Avatar"
+          image={hero.avatar}
+          ratio="1:1"
+          maxWidth={320}
+          pathPrefix="hero-avatar"
+          onChange={(avatar) => onChange({ ...hero, avatar: avatar?.url ? avatar : undefined })}
+        />
+        <p className="mt-1.5 text-xs text-muted">
+          The small picture next to your name in the navigation bar and footer. Leave it empty to use your photo — or, without
+          one, the illustrated avatar.
+        </p>
+      </div>
     </div>
   );
 }
@@ -446,7 +459,7 @@ export function ProjectsForm({
           <button
             type="submit"
             disabled={!newCat.trim()}
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink transition-colors hover:bg-surface/80 disabled:opacity-40"
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-bg disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" />
             Add category
@@ -1092,7 +1105,7 @@ export function SectionsManager({
         <button
           type="button"
           onClick={() => setShowAddModal((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-3.5 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-85"
+          className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Section
@@ -1253,9 +1266,11 @@ export function SectionsManager({
 export function SiteSettingsForm({
   content,
   onChange,
+  onOpenTheme,
 }: {
   content: SiteContent;
   onChange: (settings: SiteSettings | undefined) => void;
+  onOpenTheme?: () => void;
 }) {
   const settings = content.settings ?? {};
   const bannerCompanies = getBannerCompanies(content);
@@ -1274,6 +1289,7 @@ export function SiteSettingsForm({
       !next.copyrightText &&
       !next.projectCategories?.length &&
       !next.palette &&
+      !next.chatter &&
       !next.seo;
     onChange(empty ? undefined : next);
   }
@@ -1385,60 +1401,31 @@ export function SiteSettingsForm({
 
   return (
     <div className="space-y-8">
-      {/* Color Palette Selector */}
-      <section className="space-y-4">
-        <div>
-          <div className="flex items-center gap-1.5">
-            <Palette className="h-4 w-4 text-accent" />
-            <h3 className="text-sm font-semibold text-ink">Color Palette & Mood</h3>
+      {/* Theme — lives on its own screen now */}
+      <section className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex -space-x-1.5">
+            {getPalette(settings.palette).swatches.map((color, i) => (
+              <span key={i} className="h-6 w-6 rounded-full border-2 border-surface shadow-sm" style={{ backgroundColor: color }} />
+            ))}
+          </span>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <Palette className="h-4 w-4 text-ink" />
+              <h3 className="text-sm font-semibold text-ink">Theme · {getPalette(settings.palette).name}</h3>
+            </div>
+            <p className="mt-0.5 text-[13px] text-muted">One-click colour themes for the whole site.</p>
           </div>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            Select an ambient theme for your portfolio. This sets coordinated background tones, card surfaces, borders, glow lights, and accent highlights.
-          </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {COLOR_PALETTES.map((p) => {
-            const isActive = (settings.palette ?? "default") === p.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => commit({ palette: p.id === "default" ? undefined : p.id })}
-                className={`flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all duration-200 ${
-                  isActive
-                    ? "border-accent bg-surface ring-1 ring-accent shadow-sm"
-                    : "border-line bg-surface/50 hover:border-ink/20 hover:bg-surface"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-ink">{p.name}</span>
-                    {isActive ? (
-                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-white text-[10px]">
-                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                      </span>
-                    ) : (
-                      <span className="h-4 w-4 rounded-full border border-line" />
-                    )}
-                  </div>
-                  <p className="mt-1 text-[11px] leading-snug text-muted line-clamp-2">
-                    {p.description}
-                  </p>
-                </div>
-                <div className="mt-3 flex items-center gap-1.5 pt-2 border-t border-line/50">
-                  {p.swatches.map((color, i) => (
-                    <span
-                      key={i}
-                      className="h-3.5 w-3.5 rounded-full border border-white/10 shadow-inner"
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    />
-                  ))}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {onOpenTheme && (
+          <button
+            type="button"
+            onClick={onOpenTheme}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Change theme
+          </button>
+        )}
       </section>
 
       {/* Company Banner Manager */}
@@ -1606,7 +1593,7 @@ export function SiteSettingsForm({
           <button
             type="submit"
             disabled={!newCompName.trim()}
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink transition-colors hover:bg-surface/80 disabled:opacity-40"
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-bg disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" />
             Add company

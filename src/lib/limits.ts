@@ -16,6 +16,7 @@ export const CHAR_LIMITS = {
   copyright: 120,
   projectCategory: 50,
   sectionLabel: 40,
+  chatter: { line: 32, badge: 8 }, // a bubble line: two lines at most in its lane, on every screen
   seo: {
     metaTitle: 70,
     metaDescription: 320,
@@ -39,7 +40,7 @@ export const ITEM_LIMITS = {
   experience: 12,
   experienceBullets: 4,
   experienceTags: 6,
-  projects: 20,
+  projects: 60,
   projectTags: 6,
   tools: 16,
   skillGroups: 6,
@@ -48,6 +49,9 @@ export const ITEM_LIMITS = {
   education: 6,
   marquee: 12,
   seoKeywords: 20,
+  chatterLines: 3,
+  heroVoices: 7,
+  contactVoices: 4,
 } as const;
 
 export const HISTORY_LIMIT = 20;

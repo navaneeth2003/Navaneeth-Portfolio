@@ -21,6 +21,8 @@ export type Hero = {
   tagline: string; // max 80 chars
   shortBio: string; // max 320 chars
   photo: ImageRef; // "1:1"
+  /** The small picture beside the name in the navigation bar and footer ("1:1"). Missing = the photo, then the illustrated avatar. */
+  avatar?: ImageRef;
 };
 
 export type About = {
@@ -194,6 +196,24 @@ export type CompanyLogoOverride = {
   customLogo?: ImageRef;
 };
 
+/** The line-art cast a chatter voice can wear — "owner" is the site owner (their photo, or their avatar). */
+export const CHATTER_AVATARS = ["owner", "gus", "ezra", "iris", "rosa", "hazel", "maya", "fiona", "uma"] as const;
+export type ChatterAvatar = (typeof CHATTER_AVATARS)[number];
+
+/** One character in the crowd: who they are, their corner badge, and the lines they cycle through. */
+export type ChatterVoice = {
+  id: string;
+  avatar: ChatterAvatar;
+  badge?: string; // an emoji, max 8 chars
+  lines: string[]; // max 3, each max 40 chars; "{name}" becomes the owner's first name
+};
+
+/** The speech-bubble crowds: on the hero (around the name) and on the contact composer. */
+export type SiteChatter = {
+  hero?: ChatterVoice[];
+  contact?: ChatterVoice[];
+};
+
 /**
  * Site-level settings added in the V2 & V4 pass. Every field is optional so documents
  * written before it existed keep loading unchanged; a missing `settings` means
@@ -206,7 +226,8 @@ export type SiteSettings = {
   companyOverrides?: Record<string, CompanyLogoOverride>; // per-company logo configuration
   copyrightText?: string; // editable copyright line in footer
   projectCategories?: string[]; // custom categories registry
-  palette?: string; // selected color palette id
+  palette?: string; // selected theme id (see lib/palettes)
+  chatter?: SiteChatter; // editable speech-bubble lines; missing = the default crowd
   seo?: SeoSettings;
 };
 
@@ -249,22 +270,65 @@ export function getSectionLabel(section: { type: SectionType; label?: string }):
   return section.label?.trim() || SECTION_LABELS[section.type];
 }
 
-/** True when a section has nothing to show — such sections never render publicly. */
+const filled = (v: unknown): boolean => typeof v === "string" && v.trim().length > 0;
+
+/**
+ * The section with blank items removed — a role with no title or company, a
+ * tool with no name, a skill group with no skills, a custom card with nothing
+ * in it. What the public site renders, so a half-filled item never shows up
+ * as an empty card.
+ */
+export function pruneSection(section: Section): Section {
+  switch (section.type) {
+    case "stats":
+      return { ...section, items: (section.items ?? []).filter((s) => filled(s.value) || filled(s.label) || filled(s.icon?.url)) };
+    case "skills":
+      return {
+        ...section,
+        items: (section.items ?? []).map((g) => ({ ...g, skills: (g.skills ?? []).filter(filled) })).filter((g) => g.skills.length > 0),
+      };
+    case "experience":
+      return { ...section, items: (section.items ?? []).filter((e) => filled(e.role) || filled(e.company)) };
+    case "projects":
+      return { ...section, items: (section.items ?? []).filter((p) => filled(p.title) || filled(p.overview) || filled(p.coverImage?.url)) };
+    case "tools":
+      return { ...section, items: (section.items ?? []).filter((t) => filled(t.name) || filled(t.icon?.url)) };
+    case "certifications":
+      return { ...section, items: (section.items ?? []).filter((c) => filled(c.title)) };
+    case "education":
+      return { ...section, items: (section.items ?? []).filter((e) => filled(e.degree) || filled(e.institution)) };
+    case "custom":
+      return {
+        ...section,
+        data: {
+          ...section.data,
+          items: (section.data?.items ?? []).filter(
+            (i) => filled(i.title) || filled(i.subtitle) || filled(i.body) || filled(i.highlight) || filled(i.image?.url),
+          ),
+        },
+      };
+    default:
+      return section;
+  }
+}
+
+/** True when a section has nothing to show — such sections never render publicly (and get no nav link). */
 export function sectionIsEmpty(section: Section): boolean {
-  if (section.type === "about") {
-    return !section.data.heading.trim() && !section.data.body.trim();
+  const s = pruneSection(section);
+  switch (s.type) {
+    case "about":
+      return !filled(s.data?.heading) && !filled(s.data?.body);
+    case "custom":
+      return !filled(s.data?.heading) && !filled(s.data?.body) && (s.data.items ?? []).length === 0;
+    default:
+      return (s.items ?? []).length === 0;
   }
-  if (section.type === "custom") {
-    const d = section.data;
-    const hasItems = Array.isArray(d.items) && d.items.length > 0;
-    return !d.heading?.trim() && !d.body?.trim() && !hasItems;
-  }
-  return section.items.length === 0;
 }
 
 /** Visible, non-empty sections in configured order — the public render list. */
 export function renderableSections(content: SiteContent): Section[] {
   return [...content.sections]
     .sort((a, b) => a.order - b.order)
-    .filter((s) => s.visible && !sectionIsEmpty(s));
+    .filter((s) => s.visible && !sectionIsEmpty(s))
+    .map(pruneSection);
 }

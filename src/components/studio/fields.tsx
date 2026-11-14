@@ -30,7 +30,7 @@ export function FieldShell({
   return (
     <Component className="block">
       <span className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-medium text-ink">{label}</span>
+        <span className="text-sm font-semibold text-ink">{label}</span>
         {counter}
       </span>
       <span className="mt-1.5 block">{children}</span>
@@ -40,7 +40,7 @@ export function FieldShell({
 }
 
 const inputClass =
-  "w-full rounded-[12px] border border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/60 transition-colors duration-200 focus:border-accent focus:outline-none";
+  "w-full rounded-[14px] border border-line bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-muted/60 transition-[border-color,box-shadow] duration-200 focus:border-ink focus:shadow-[0_0_0_4px_rgb(251_237_185/0.9)] focus:outline-none";
 
 export function TextField({
   label,

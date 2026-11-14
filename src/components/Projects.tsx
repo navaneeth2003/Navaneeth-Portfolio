@@ -1,457 +1,730 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useInView, useScroll, useTransform } from "motion/react";
-import { ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
-import type { ProjectItem, ProjectVertical } from "@/lib/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useDragControls } from "motion/react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  ChevronDown,
+  Layers,
+  Lightbulb,
+  PenTool,
+  Search,
+  Sparkles,
+  TrendingUp,
+  Wrench,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import type { ProjectItem } from "@/lib/types";
 import { PROJECT_VERTICALS } from "@/lib/types";
-import { pad2 } from "@/lib/format";
-import { GridLines, useIsMobile, useReveal } from "./ui";
+import { pad2, plural } from "@/lib/format";
+import { ScrollReveal, setPageScrollLocked, siteScrollTo, useMedia } from "./ui";
+import { AVATAR, AvatarTile, Bubble, ChipRail, IconTile, SECTION_Y, SectionHeader, WRAP, tintAt } from "./site/kit";
 
-function LaptopMock({
-  p,
-  onHoverChange,
+const VERTICAL_ICONS: Record<string, LucideIcon> = {
+  "Product Creation": Lightbulb,
+  "Product Design": PenTool,
+  "Product Improvement": Wrench,
+  "Analytical Case Studies": BarChart3,
+  "Product Teardowns": Search,
+};
+const FALLBACK_ICONS: LucideIcon[] = [Layers, Sparkles, Lightbulb];
+/** Teammates who peek into covers that have no image yet. */
+const PEEKERS = [AVATAR.gus, AVATAR.ezra, AVATAR.iris, AVATAR.rosa, AVATAR.hazel, AVATAR.fiona, AVATAR.maya];
+
+/**
+ * In the grouped "All" view each category row shows a few cards: 2 on
+ * tablets, 3 on laptops, 4 on large monitors (phones swipe up to 8).
+ * Written out so Tailwind sees every class.
+ */
+const ROW_VISIBILITY = ["", "", "md:hidden lg:block", "md:hidden 3xl:block", "md:hidden"];
+const GRID_ITEM = "md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(33.333%-18.67px)] 3xl:w-[calc(25%-21px)]";
+
+type Look = { tone: string; Icon: LucideIcon; number: string; peeker: string };
+type SheetState = { id: string; ids: string[] };
+
+/**
+ * Projects, built for a big catalogue across many categories:
+ *  · a filter bar — category pills with counts and a search box — that
+ *    pins under the nav on laptops while you browse;
+ *  · "All" shows one row per category (App Store style): phones swipe a
+ *    rail with a "See all" tile at the end, larger screens show the first
+ *    2 / 3 / 4 cards and a "See all N →" link;
+ *  · a category or a search shows everything that matches — compact rows
+ *    on phones, a card grid elsewhere — a page at a time with "Show more".
+ * Opening a card brings up the project as an app-style sheet (bottom sheet
+ * on phones, dialog elsewhere) with prev / next through the same list.
+ */
+/** The built-in "everything" filter — a value no CMS category can collide with (even one named "All"). */
+const ALL = "\u0000all";
+
+export function Projects({
+  items: raw,
+  title,
+  categories: rawCategories,
 }: {
-  p: ProjectItem;
-  onHoverChange: (v: boolean) => void;
+  items: ProjectItem[];
+  title?: string;
+  categories?: string[];
 }) {
-  const [loaded, setLoaded] = useState(false);
-  const hasCover = Boolean(p.coverImage.url);
-
-  const screen = (
-    <div className="relative aspect-[16/10] overflow-hidden bg-[#101013]">
-      {hasCover ? (
-        <>
-          {/* loading shimmer while the cover fades in */}
-          {!loaded && <div aria-hidden className="absolute inset-0 animate-pulse bg-white/[0.04]" />}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={p.coverImage.url}
-            alt=""
-            loading="lazy"
-            onLoad={() => setLoaded(true)}
-            className={`h-full w-full object-cover object-top transition-all duration-700 ease-out group-hover:scale-[1.08] ${
-              loaded ? "opacity-100 blur-0" : "scale-[1.02] opacity-0 blur-md"
-            }`}
-          />
-          {/* Subtle bottom gradient behind the title — only over the lower half, never darkening the whole image */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-black/95 via-black/55 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 z-10 p-3 sm:p-3.5 md:p-4">
-            <p className="line-clamp-2 font-heading text-[14px] font-bold leading-snug tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] sm:text-[15px] md:text-[16px] xl:text-[17px]">
-              {p.title}
-            </p>
-          </div>
-        </>
-      ) : (
-        /* no cover yet — text mock screen */
-        <div className="flex h-full w-full flex-col justify-end bg-[radial-gradient(120%_90%_at_20%_0%,rgba(255,74,26,0.28),transparent_60%),linear-gradient(160deg,#1a1a1f,#0b0b0e)] p-4 sm:p-5 lg:p-6 transition-transform duration-700 ease-out group-hover:scale-[1.04]">
-          <p className="font-heading text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-white/45">{p.vertical}</p>
-          <p className="mt-1.5 sm:mt-2 line-clamp-3 font-heading text-[clamp(16px,2.8vw,22px)] font-semibold leading-[1.18] text-white/90 md:text-[19px] lg:text-[22px]">
-            {p.title}
-          </p>
-        </div>
-      )}
-      {/* subtle hover shade */}
-      <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-    </div>
+  // Every project has a category and a title to show: blanks become "Other" / "Untitled project",
+  // and stray spaces never split one category into two.
+  const items = useMemo(
+    () =>
+      raw.map((p) => {
+        const vertical = p.vertical.trim() || "Other";
+        const title = p.title.trim() || "Untitled project";
+        return vertical === p.vertical && title === p.title ? p : { ...p, vertical, title };
+      }),
+    [raw],
   );
+  const categories = useMemo(() => rawCategories?.map((c) => c.trim()).filter(Boolean), [rawCategories]);
+  // Category order: the CMS registry (or the defaults), then any stragglers — only those with work.
+  const order = useMemo(() => {
+    const base = categories && categories.length > 0 ? categories : (PROJECT_VERTICALS as readonly string[]);
+    return Array.from(new Set([...base, ...items.map((p) => p.vertical)])).filter((v) =>
+      items.some((p) => p.vertical === v),
+    );
+  }, [categories, items]);
+  const ordered = useMemo(() => order.flatMap((v) => items.filter((p) => p.vertical === v)), [order, items]);
+  const byId = useMemo(() => new Map(items.map((p) => [p.id, p])), [items]);
+  const numberOf = useMemo(() => {
+    const m = new Map<string, number>();
+    order.forEach((v) => items.filter((p) => p.vertical === v).forEach((p, i) => m.set(p.id, i + 1)));
+    return m;
+  }, [order, items]);
+
+  const [filter, setFilter] = useState(ALL);
+  const [query, setQuery] = useState("");
+  const [pages, setPages] = useState(1);
+  const [sheet, setSheet] = useState<SheetState | null>(null);
+  const md = useMedia("(min-width: 768px)");
+  const lg = useMedia("(min-width: 1024px)");
+  const huge = useMedia("(min-width: 1920px)");
+  const pageSize = huge ? 8 : lg ? 6 : md ? 4 : 5;
+  const sectionRef = useRef<HTMLElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+
+  const q = query.trim().toLowerCase();
+  const matches = (p: ProjectItem) =>
+    [p.title, p.overview, p.vertical, p.resultsAndImpact ?? "", ...(p.tags ?? [])].join(" ").toLowerCase().includes(q);
+  const grouped = !q && filter === ALL && order.length > 1;
+  const list = q ? ordered.filter(matches) : filter === ALL ? ordered : ordered.filter((p) => p.vertical === filter);
+  const shown = list.slice(0, pages * pageSize);
+
+  const lookOf = (p: ProjectItem): Look => {
+    const vi = Math.max(0, order.indexOf(p.vertical));
+    return {
+      tone: tintAt(vi),
+      Icon: VERTICAL_ICONS[p.vertical] ?? FALLBACK_ICONS[vi % FALLBACK_ICONS.length],
+      number: pad2(numberOf.get(p.id) ?? 1),
+      peeker: PEEKERS[Math.max(0, ordered.indexOf(p)) % PEEKERS.length],
+    };
+  };
+
+  /** Bring the top of the section (just under the nav) into view after a big layout change. */
+  const toTop = () => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    if (window.scrollY > top) siteScrollTo(top - 24);
+  };
+  const choose = (cat: string) => {
+    setFilter(cat);
+    setQuery("");
+    setPages(1);
+    toTop();
+  };
+
+  const open = (id: string, ids: string[]) => {
+    opener.current = document.activeElement as HTMLElement | null;
+    setSheet({ id, ids });
+  };
+  const close = () => {
+    setSheet(null);
+    window.setTimeout(() => opener.current?.focus(), 0);
+  };
+  const step = (d: number) =>
+    setSheet((s) => {
+      if (!s || s.ids.length < 2) return s;
+      const i = s.ids.indexOf(s.id);
+      return { ...s, id: s.ids[(i + d + s.ids.length) % s.ids.length] };
+    });
+
+  const current = sheet ? byId.get(sheet.id) : undefined;
+  const label = title?.trim() || "Projects";
+  const listIds = list.map((p) => p.id);
 
   return (
-    <div
-      className="relative overflow-hidden bg-[#0c0c0e] px-4 pt-5 sm:px-5 sm:pt-6 md:px-5 md:pt-6 lg:px-6 lg:pt-7 xl:px-7 xl:pt-8"
-      onMouseEnter={() => onHoverChange(true)}
-      onMouseLeave={() => onHoverChange(false)}
-    >
-      {/* studio glow — dark card backdrop */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_70%_at_50%_0%,rgba(255,255,255,0.09),transparent_70%)]" />
-      <div className="pointer-events-none absolute inset-x-8 bottom-0 h-24 bg-black/60 blur-2xl" />
+    <section id="projects" ref={sectionRef} className={`relative scroll-mt-24 ${SECTION_Y}`}>
+      <div className={WRAP}>
+        <ScrollReveal>
+          <SectionHeader
+            eyebrow={`${plural(items.length, "project")} · ${plural(order.length, "category", "categories")}`}
+            title={label}
+          />
+        </ScrollReveal>
 
-      {/* vertical pill — floating top-left over the backdrop */}
-      <span className="absolute left-4 top-4 z-10 max-w-[calc(100%-2rem)] truncate rounded-md bg-white/[0.08] px-2.5 py-1 text-[12px] font-medium text-white/85 backdrop-blur-md">
-        {p.vertical}
-      </span>
-
-      {/* laptop */}
-      <div className="relative">
-        <div className="relative overflow-hidden rounded-t-xl border border-white/10 border-b-0 bg-black shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]">
-          {screen}
+        {/* the filter bar */}
+        <div className="z-30 mt-9 md:mt-12 lg:sticky lg:top-[92px] 3xl:top-[112px]">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4 md:rounded-full md:border md:border-hairline md:bg-card/85 md:p-1.5 md:shadow-card md:backdrop-blur-xl">
+            {order.length > 1 ? (
+              // One row of category chips that swipes when there are more than
+              // fit — edge to edge on phones, inside the bar from tablets up.
+              <ChipRail
+                label="Filter projects by category"
+                active={q ? "search" : filter}
+                className="-mx-4 sm:-mx-6 md:mx-0 md:min-w-0 md:flex-1"
+                scrollerClassName="-my-2 px-4 py-2 sm:px-6 md:px-0"
+                trackClassName="gap-1.5 md:mx-0"
+              >
+                {[ALL, ...order].map((cat) => {
+                  const active = !q && filter === cat;
+                  const count = cat === ALL ? items.length : items.filter((p) => p.vertical === cat).length;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => choose(cat)}
+                      className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[14px] font-semibold transition-colors 3xl:min-h-[52px] 3xl:px-5 3xl:text-[17px] ${
+                        active
+                          ? "bg-onyx text-on-onyx shadow-cta"
+                          : "border border-hairline bg-card text-ash shadow-pill hover:text-onyx md:border-transparent md:bg-transparent md:shadow-none"
+                      }`}
+                    >
+                      {cat === ALL ? "All" : cat}
+                      <span className={`tabular-nums ${active ? "text-on-onyx/60" : "text-dust"}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </ChipRail>
+            ) : (
+              <p className="px-1 text-[15px] font-semibold text-ash md:px-4">{plural(items.length, "project")}</p>
+            )}
+            <label className="flex h-12 w-full shrink-0 items-center gap-2.5 rounded-full border border-hairline bg-card px-4 shadow-pill md:h-11 md:w-[230px] md:border-transparent md:bg-well md:shadow-none lg:w-[260px] 3xl:h-[52px] 3xl:w-[320px]">
+              <Search size={17} className="shrink-0 text-ash" aria-hidden />
+              <span className="sr-only">Search projects</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPages(1);
+                }}
+                placeholder="Search projects…"
+                className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-onyx placeholder:text-dust focus-visible:outline-none 3xl:text-[17px]"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                  className="grid size-7 shrink-0 place-items-center rounded-full bg-onyx/10 text-onyx hover:bg-onyx/15"
+                >
+                  <X size={14} aria-hidden />
+                </button>
+              )}
+            </label>
+          </div>
         </div>
-        {/* laptop base */}
-        <div className="relative mx-auto h-[10px] w-[96%] rounded-b-xl bg-gradient-to-b from-[#2b2b30] to-[#101012]" />
-        <div className="mx-auto h-[4px] w-[14%] rounded-b-lg bg-[#333338]" />
-        {/* desk shadow */}
-        <div className="mx-auto mt-1 h-5 w-[80%] rounded-full bg-black/70 blur-xl" />
+
+        {grouped ? (
+          /* ---------- All: one row per category ---------- */
+          <div className="mt-10 space-y-14 md:mt-14 md:space-y-16 3xl:space-y-20">
+            {order.map((cat, ci) => {
+              const catItems = ordered.filter((p) => p.vertical === cat);
+              const ids = catItems.map((p) => p.id);
+              const Icon = VERTICAL_ICONS[cat] ?? FALLBACK_ICONS[ci % FALLBACK_ICONS.length];
+              return (
+                <div key={cat}>
+                  <div className="flex items-end justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <IconTile icon={Icon} tone={tintAt(ci)} className="size-11 md:size-12 3xl:size-14" size={20} />
+                      <h3 className="truncate text-[21px] font-extrabold tracking-[-0.03em] text-onyx md:text-[27px] 3xl:text-[34px]">{cat}</h3>
+                      <span className="shrink-0 rounded-full bg-well px-2.5 py-0.5 text-[13px] font-bold tabular-nums text-ash 3xl:text-[15px]">
+                        {catItems.length}
+                      </span>
+                    </div>
+                    {catItems.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => choose(cat)}
+                        className="group inline-flex shrink-0 items-center gap-1.5 text-[14.5px] font-semibold text-onyx underline decoration-onyx/25 decoration-2 underline-offset-[5px] hover:decoration-onyx 3xl:text-[17px]"
+                      >
+                        <span className="hidden sm:inline">See all {catItems.length}</span>
+                        <span className="sm:hidden">All</span>
+                        <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                  <ul className="no-scrollbar -mx-4 mt-5 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 pt-1 sm:-mx-6 sm:scroll-px-6 sm:px-6 md:mx-0 md:mt-6 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3 xl:gap-7 3xl:grid-cols-4">
+                    {catItems.slice(0, 8).map((p, i) => (
+                      <li key={p.id} className={`w-[80%] shrink-0 snap-start sm:w-[46%] md:w-auto ${ROW_VISIBILITY[Math.min(i, 4)]}`}>
+                        <ProjectCard p={p} look={lookOf(p)} onOpen={() => open(p.id, ids)} />
+                      </li>
+                    ))}
+                    {catItems.length > 8 && (
+                      <li className="w-[56%] shrink-0 snap-start md:hidden">
+                        <button
+                          type="button"
+                          onClick={() => choose(cat)}
+                          className={`flex h-full min-h-[260px] w-full flex-col items-center justify-center gap-3 rounded-[28px] border border-hairline text-center ${tintAt(ci)}`}
+                        >
+                          <span className="grid size-14 place-items-center rounded-full bg-onyx text-on-onyx shadow-cta">
+                            <ArrowRight size={22} aria-hidden />
+                          </span>
+                          <span className="text-[16px] font-bold text-onyx">See all {catItems.length}</span>
+                          <span className="px-4 text-[13px] text-onyx/70">{cat}</span>
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* ---------- one category, a search, or a single-category site ---------- */
+          <div className="mt-9 md:mt-12">
+            {(q || filter !== ALL) && (
+              <div className="mb-6 flex flex-wrap items-center gap-3 md:mb-8">
+                {order.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => choose(ALL)}
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-hairline bg-card px-4 text-[14px] font-semibold text-onyx shadow-pill transition-transform hover:-translate-x-0.5"
+                  >
+                    <ArrowLeft size={15} aria-hidden /> All projects
+                  </button>
+                )}
+                <p className="text-[15px] font-semibold text-ash 3xl:text-[17px]" aria-live="polite">
+                  {q ? (
+                    <>
+                      {plural(list.length, "result")} for “<span className="text-onyx">{query.trim()}</span>”
+                    </>
+                  ) : (
+                    <>
+                      {plural(list.length, "project")} in <span className="text-onyx">{filter}</span>
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {list.length === 0 ? (
+              <div className="flex flex-col items-center py-12 text-center md:py-16">
+                <AvatarTile src={AVATAR.iris} tone="bg-tile-bubblegum" tilt={-6} className="size-20 md:size-24">
+                  <Bubble className="-top-7 left-1/2 -translate-x-1/2">Hmm… 🤔</Bubble>
+                </AvatarTile>
+                <p className="mt-8 text-[18px] font-bold text-onyx md:text-[20px]">Nothing matches that yet</p>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="mt-3 text-[15px] font-semibold text-onyx underline decoration-onyx/25 decoration-2 underline-offset-[5px] hover:decoration-onyx"
+                >
+                  Clear the search
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* phones: compact rows */}
+                <ul className="grid gap-3 md:hidden">
+                  {shown.map((p) => (
+                    <li key={p.id}>
+                      <CompactCard p={p} look={lookOf(p)} onOpen={() => open(p.id, listIds)} />
+                    </li>
+                  ))}
+                </ul>
+                {/* md+: cards, a short last row centres */}
+                <ul className="hidden md:flex md:flex-wrap md:justify-center md:gap-6 xl:gap-7">
+                  {shown.map((p) => (
+                    <li key={p.id} className={GRID_ITEM}>
+                      <ProjectCard p={p} look={lookOf(p)} onOpen={() => open(p.id, listIds)} />
+                    </li>
+                  ))}
+                </ul>
+
+                {list.length > shown.length ? (
+                  <div className="mt-10 flex flex-col items-center gap-3 md:mt-12">
+                    <button
+                      type="button"
+                      onClick={() => setPages((n) => n + 1)}
+                      className="inline-flex min-h-[52px] items-center gap-2.5 rounded-full bg-onyx px-6 text-[15px] font-semibold text-on-onyx shadow-cta transition-transform hover:-translate-y-0.5 3xl:min-h-[60px] 3xl:text-[17px]"
+                    >
+                      Show more
+                      <span className="rounded-full bg-on-onyx/15 px-2 py-0.5 text-[12px] font-bold tabular-nums">
+                        +{Math.min(pageSize, list.length - shown.length)}
+                      </span>
+                    </button>
+                    <p className="text-[13px] font-medium tabular-nums text-ash">
+                      Showing {shown.length} of {list.length}
+                    </p>
+                  </div>
+                ) : list.length > pageSize ? (
+                  <div className="mt-10 flex justify-center md:mt-12">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPages(1);
+                        toTop();
+                      }}
+                      className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-hairline bg-card px-5 text-[14.5px] font-semibold text-onyx shadow-pill"
+                    >
+                      Show fewer <ChevronDown size={16} className="rotate-180" aria-hidden />
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+
+      <AnimatePresence>
+        {sheet && current && (
+          <ProjectSheet
+            key="sheet"
+            p={current}
+            look={lookOf(current)}
+            position={`${sheet.ids.indexOf(sheet.id) + 1} / ${sheet.ids.length}`}
+            canStep={sheet.ids.length > 1}
+            onClose={close}
+            onPrev={() => step(-1)}
+            onNext={() => step(1)}
+          />
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
 
-function ProjectCard({
+/* ---------- covers ---------- */
+
+function Cover({ p, look, size = "card" }: { p: ProjectItem; look: Look; size?: "card" | "big" | "thumb" }) {
+  // "loading" → "loaded", or "failed" (a 404, a blocked host) → the illustrated cover below.
+  const [state, setState] = useState<"loading" | "loaded" | "failed">("loading");
+  if (p.coverImage.url && state !== "failed") {
+    return (
+      <>
+        {state !== "loaded" && <span aria-hidden className="absolute inset-0 animate-pulse bg-well" />}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={p.coverImage.url}
+          alt=""
+          loading="lazy"
+          // already settled before React was listening (cached, or hydrated late)
+          ref={(img) => {
+            if (img?.complete && state === "loading") setState(img.naturalWidth > 0 ? "loaded" : "failed");
+          }}
+          onLoad={() => setState("loaded")}
+          onError={() => setState("failed")}
+          className={`absolute inset-0 h-full w-full object-cover object-top transition-[opacity,transform] duration-700 group-hover:scale-[1.04] ${
+            state === "loaded" ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      </>
+    );
+  }
+  const { Icon } = look;
+  if (size === "thumb") {
+    return (
+      <span aria-hidden className={`absolute inset-0 grid place-items-center ${look.tone}`}>
+        <Icon size={24} strokeWidth={1.9} className="text-onyx" />
+      </span>
+    );
+  }
+  const big = size === "big";
+  return (
+    <span aria-hidden className={`absolute inset-0 block ${look.tone}`}>
+      <span className="absolute inset-0 block bg-[radial-gradient(color-mix(in_oklab,var(--color-onyx)_12%,transparent)_1.2px,transparent_1.3px)] bg-[size:14px_14px] [mask-image:linear-gradient(160deg,black,transparent_75%)]" />
+      <span className={`absolute flex items-start justify-between ${big ? "inset-x-6 top-6" : "inset-x-4 top-4 md:inset-x-5 md:top-5"}`}>
+        <IconTile icon={Icon} className={big ? "size-16" : "size-12 md:size-14"} size={big ? 26 : 22} />
+        {!big && <span className="display text-[56px] text-onyx/12 md:text-[64px]">{look.number}</span>}
+      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={look.peeker}
+        alt=""
+        draggable={false}
+        className={`absolute -bottom-[18%] right-[7%] w-[42%] rotate-[-5deg] transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-0 ${
+          big ? "max-w-[260px]" : "max-w-[190px]"
+        }`}
+      />
+    </span>
+  );
+}
+
+function ProjectCard({ p, look, onOpen }: { p: ProjectItem; look: Look; onOpen: () => void }) {
+  const tags = (p.tags ?? []).filter((t) => t.trim());
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+      aria-label={`Open ${p.title}`}
+      className="group surface flex h-full w-full flex-col rounded-[28px] p-2 text-left transition-transform duration-500 hover:-translate-y-1.5 md:rounded-[32px] md:p-2.5 3xl:rounded-[38px] 3xl:p-3"
+    >
+      <span className="relative block aspect-[16/11] w-full overflow-hidden rounded-[22px] bg-well md:rounded-[25px] 3xl:rounded-[30px]">
+        <Cover p={p} look={look} />
+        {p.coverImage.url && (
+          <span className="absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full border border-hairline bg-card/90 px-3 py-1 text-[12px] font-semibold text-onyx shadow-pill backdrop-blur 3xl:text-[14px]">
+            {p.vertical}
+          </span>
+        )}
+      </span>
+      <span className="flex flex-1 flex-col px-3 pb-3 pt-4 md:px-4 md:pb-4 md:pt-5 3xl:px-5 3xl:pb-5">
+        {!p.coverImage.url && (
+          <span className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.12em] text-ash 3xl:text-[14px]">{p.vertical}</span>
+        )}
+        <span className="line-clamp-2 text-[18px] font-bold leading-snug tracking-[-0.02em] text-onyx md:text-[19px] 3xl:text-[23px]">
+          {p.title}
+        </span>
+        {p.overview && (
+          <span className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-ash md:text-[15px] 3xl:text-[17px]">{p.overview}</span>
+        )}
+        <span className="mt-auto flex items-center justify-between gap-3 pt-5">
+          <span className="flex min-w-0 flex-wrap gap-1.5">
+            {tags.slice(0, 2).map((t, ti) => (
+              <span key={`${ti}-${t}`} className="truncate rounded-full bg-well px-2.5 py-1 text-[12px] font-semibold text-ash 3xl:text-[14px]">
+                #{t}
+              </span>
+            ))}
+            {tags.length === 0 && <span className="text-[13px] font-semibold text-onyx/70 3xl:text-[15px]">Read the story</span>}
+          </span>
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-onyx text-on-onyx shadow-cta transition-transform duration-300 group-hover:rotate-45 3xl:size-12">
+            <ArrowUpRight size={18} strokeWidth={2.3} aria-hidden />
+          </span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/** Phones, inside a category or a search: one dense row per project. */
+function CompactCard({ p, look, onOpen }: { p: ProjectItem; look: Look; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+      aria-label={`Open ${p.title}`}
+      className="group surface flex w-full items-center gap-3 rounded-[22px] p-2 pr-3 text-left"
+    >
+      <span className="relative block size-[76px] shrink-0 overflow-hidden rounded-[16px] bg-well">
+        <Cover p={p} look={look} size="thumb" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[11px] font-bold uppercase tracking-[0.12em] text-ash">{p.vertical}</span>
+        <span className="mt-0.5 line-clamp-2 text-[15px] font-bold leading-snug text-onyx">{p.title}</span>
+      </span>
+      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-onyx text-on-onyx">
+        <ArrowUpRight size={16} strokeWidth={2.3} aria-hidden />
+      </span>
+    </button>
+  );
+}
+
+/* ---------- the sheet ---------- */
+
+function ProjectSheet({
   p,
-  index,
-  isExpanded,
-  onToggleExpand,
+  look,
+  position,
+  canStep,
+  onClose,
+  onPrev,
+  onNext,
 }: {
   p: ProjectItem;
-  index: number;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+  look: Look;
+  position: string;
+  canStep: boolean;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
 }) {
-  const [previewHover, setPreviewHover] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
-  const r = useReveal();
-  const mobile = useIsMobile();
-  const row = Math.floor(index / 3);
-  const delay = mobile ? 0 : (index % 3) * 0.08 + (row % 3) * 0.05;
-  const hidden = { opacity: 0, y: r.yBody + 16, scale: 0.96, filter: mobile ? "blur(6px)" : "blur(8px)" };
-
-  // Action links
-  const primary = p.liveUrl
-    ? { href: p.liveUrl, label: "View Project" }
-    : p.caseStudyUrl
-      ? { href: p.caseStudyUrl, label: "Read Case Study" }
-      : null;
-  const secondaryCaseStudy = p.liveUrl && p.caseStudyUrl ? p.caseStudyUrl : null;
+  const desktop = useMedia("(min-width: 768px)");
+  const dragControls = useDragControls();
+  const closeRef = useRef<HTMLButtonElement>(null);
   const tags = (p.tags ?? []).filter((t) => t.trim());
+  const primary = p.liveUrl
+    ? { href: p.liveUrl, label: "View project" }
+    : p.caseStudyUrl
+      ? { href: p.caseStudyUrl, label: "Read case study" }
+      : null;
+  const secondary = p.liveUrl && p.caseStudyUrl ? p.caseStudyUrl : null;
+
+  useEffect(() => {
+    setPageScrollLocked(true);
+    closeRef.current?.focus();
+    return () => setPageScrollLocked(false);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") onNext();
+      if (e.key === "ArrowLeft") onPrev();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, onNext, onPrev]);
 
   return (
-    <motion.div
-      ref={ref}
-      initial={hidden}
-      animate={inView ? { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" } : hidden}
-      transition={{ duration: r.duration, delay, ease: r.ease }}
-      className="min-w-0"
-    >
-      <article
-        data-project-card
-        className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)] focus-within:border-white/25 ${
-          isExpanded
-            ? "border-white/30 bg-[#161616]"
-            : "cursor-pointer border-white/10 bg-[#141414] hover:border-white/25"
-        }`}
-        onClick={() => {
-          if (!isExpanded) onToggleExpand();
+    <motion.div className="fixed inset-0 z-[95] flex items-end justify-center md:items-center md:p-6">
+      <motion.button
+        type="button"
+        tabIndex={-1}
+        aria-label="Close project"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 cursor-default bg-black/45 backdrop-blur-[6px]"
+      />
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="project-sheet-title"
+        initial={desktop ? { opacity: 0, y: 26, scale: 0.97 } : { y: "100%" }}
+        animate={desktop ? { opacity: 1, y: 0, scale: 1 } : { y: 0 }}
+        exit={desktop ? { opacity: 0, y: 18, scale: 0.98 } : { y: "100%" }}
+        transition={{ type: "spring", stiffness: 330, damping: 34 }}
+        drag={desktop ? false : "y"}
+        dragListener={false}
+        dragControls={dragControls}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.7 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 110 || info.velocity.y > 650) onClose();
         }}
-        onMouseLeave={() => {
-          setPreviewHover(false);
-        }}
-        onMouseMove={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-        }}
+        className="relative flex max-h-[92svh] w-full flex-col overflow-hidden rounded-t-[32px] border border-hairline bg-card shadow-float md:max-h-[88vh] md:max-w-[780px] md:rounded-[36px] 3xl:max-w-[980px]"
       >
-        {/* desktop cursor-following cue: Click to Expand */}
-        {!isExpanded && (
-          <motion.div
-            aria-hidden
-            animate={{
-              opacity: previewHover ? 1 : 0,
-              scale: previewHover ? 1 : 0.85,
-            }}
-            transition={{ duration: 0.2 }}
-            className="pointer-events-none absolute z-20 hidden -translate-x-1/2 -translate-y-[160%] whitespace-nowrap rounded-full bg-black/85 px-4 py-2 text-[13px] font-medium text-white shadow-xl backdrop-blur-md md:block"
-            style={{ left: pos.x, top: pos.y }}
-          >
-            Click to Expand
-          </motion.div>
-        )}
+        {/* grabber — phones drag the sheet down to close */}
+        <div onPointerDown={(e) => dragControls.start(e)} className="flex shrink-0 touch-none justify-center pb-2 pt-3 md:hidden">
+          <span className="h-1.5 w-12 rounded-full bg-onyx/15" />
+        </div>
 
-        {/* Laptop mock with project cover image & title over image */}
-        <LaptopMock p={p} onHoverChange={setPreviewHover} />
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-5 top-7 z-10 grid size-11 place-items-center rounded-full border border-hairline bg-card/90 text-onyx shadow-pill backdrop-blur transition-transform hover:rotate-90 md:right-8 md:top-8"
+        >
+          <X size={19} strokeWidth={2.3} />
+        </button>
 
-        {/* Compact bottom bar for the collapsed card */}
-        {!isExpanded && (
-          <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-[#181818] px-4 py-3 sm:px-5">
-            <span className="truncate font-heading text-[12px] font-medium tracking-wide text-white/55 sm:text-[13px]">
-              {p.vertical}
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleExpand();
-              }}
-              aria-label={`Expand ${p.title}`}
-              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1 font-heading text-[12px] font-medium text-white/85 transition-colors duration-200 group-hover:border-white/30 group-hover:bg-white/10 group-hover:text-white"
-            >
-              <span>Expand</span>
-              <ChevronDown size={14} className="transition-transform duration-300 group-hover:translate-y-0.5" />
-            </button>
-          </div>
-        )}
-
-        {/* Expanded detail drawer */}
-        <AnimatePresence initial={false}>
-          {isExpanded && (
+        <div data-lenis-prevent className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6 md:px-5 md:pb-8 md:pt-5">
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden border-t border-white/10"
+              key={p.id}
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -18 }}
+              transition={{ duration: 0.22 }}
             >
-              {/* Header with Title, Vertical and Actions */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-[#181818] px-4 py-3.5 sm:px-5 md:px-6">
-                <div className="min-w-0 flex-1">
-                  <h4 className="line-clamp-2 font-heading text-[17px] font-semibold leading-snug text-white sm:text-[18px] md:text-[20px]">
-                    {p.title}
-                  </h4>
-                  <p className="truncate font-heading text-[13px] text-white/50">{p.vertical}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {primary && (
-                    <a
-                      href={primary.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`${primary.label}: ${p.title}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="group/btn relative inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-3.5 py-2 font-heading text-[13px] font-medium text-white transition-all duration-300 hover:border-white/35 hover:bg-white/[0.12] active:bg-white/[0.16] sm:text-[14px]"
-                    >
-                      {primary.label}
-                      <ArrowUpRight size={15} />
-                    </a>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleExpand();
-                    }}
-                    aria-label="Collapse details"
-                    className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 font-heading text-[12px] font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white"
-                  >
-                    <span>Close</span>
-                    <ChevronUp size={14} />
-                  </button>
-                </div>
+              <div
+                className={`group relative overflow-hidden rounded-[24px] bg-well md:rounded-[28px] ${
+                  p.coverImage.url ? "aspect-[16/9]" : "aspect-[16/9] md:aspect-[5/2]"
+                }`}
+              >
+                <Cover p={p} look={look} size="big" />
               </div>
 
-              {/* Story content: overview, results/impact, tags */}
-              <div className="flex flex-col gap-4 bg-[#141414] px-4 py-5 sm:px-5 md:px-6 md:py-6">
+              <div className="px-2 pt-6 md:px-4 md:pt-8 3xl:px-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card px-3.5 py-1.5 text-[13px] font-semibold text-ash shadow-pill">
+                    <span aria-hidden className="size-2 rounded-full bg-pop" />
+                    {p.vertical}
+                  </span>
+                  <span className="rounded-full bg-well px-3 py-1.5 text-[13px] font-semibold tabular-nums text-ash">{position}</span>
+                </div>
+                <h3 id="project-sheet-title" className="display mt-4 text-[30px] leading-[1.04] md:text-[40px] 3xl:text-[52px]">
+                  {p.title}
+                </h3>
                 {p.overview && (
-                  <p className="break-words font-heading text-[14px] font-light leading-[1.7] text-white/70 sm:text-[15px] md:text-[16px]">
-                    {p.overview}
-                  </p>
+                  <p className="mt-4 whitespace-pre-line text-[15.5px] leading-[1.7] text-ash md:text-[17px] 3xl:text-[20px]">{p.overview}</p>
                 )}
+
                 {p.resultsAndImpact && (
-                  <div>
-                    <p className="font-heading text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
-                      Results &amp; impact
-                    </p>
-                    <p className="mt-2 break-words font-heading text-[14px] font-light leading-[1.7] text-white/85 sm:text-[15px] md:text-[16px]">
+                  <div className="mt-6 rounded-[24px] bg-mint p-5 md:p-6">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={TrendingUp} className="size-10" size={18} />
+                      <p className="text-[14px] font-bold text-onyx md:text-[15px]">Results &amp; impact</p>
+                    </div>
+                    <p className="mt-3 whitespace-pre-line text-[15px] font-medium leading-[1.7] text-onyx/80 md:text-[16.5px] 3xl:text-[19px]">
                       {p.resultsAndImpact}
                     </p>
                   </div>
                 )}
-                {(tags.length > 0 || secondaryCaseStudy) && (
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pt-2">
-                    {tags.length > 0 && (
-                      <p className="flex min-w-0 flex-wrap gap-x-2 gap-y-2 font-heading text-[13px] text-white/60 md:text-[14px]">
-                        {tags.map((t) => (
-                          <span key={t} className="break-words border-l border-white/25 pl-3 first:border-l-0 first:pl-0">
-                            # {t}
-                          </span>
-                        ))}
-                      </p>
-                    )}
-                    {secondaryCaseStudy && (
+
+                {tags.length > 0 && (
+                  <ul className="mt-6 flex flex-wrap gap-2">
+                    {tags.map((t, ti) => (
+                      <li key={`${ti}-${t}`} className="rounded-full border border-hairline bg-well px-3 py-1 text-[13px] font-semibold text-ash">
+                        # {t}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {(primary || secondary) && (
+                  <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
+                    {primary && (
                       <a
-                        href={secondaryCaseStudy}
+                        href={primary.href}
                         target="_blank"
                         rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="-my-2 inline-flex min-h-[40px] items-center gap-1 rounded font-heading text-[13px] font-medium text-white/80 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white hover:decoration-white active:text-white md:text-[14px]"
+                        className="inline-flex min-h-[52px] items-center gap-2 rounded-full bg-onyx px-6 text-[15px] font-semibold text-on-onyx shadow-cta transition-transform hover:-translate-y-0.5"
                       >
-                        Read case study <ArrowUpRight size={14} aria-hidden />
+                        {primary.label}
+                        <ArrowUpRight size={17} strokeWidth={2.3} className="text-pop" aria-hidden />
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    )}
+                    {secondary && (
+                      <a
+                        href={secondary}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-onyx underline decoration-onyx/30 decoration-2 underline-offset-[6px] hover:decoration-onyx"
+                      >
+                        Read case study <ArrowUpRight size={16} aria-hidden />
+                        <span className="sr-only"> (opens in a new tab)</span>
                       </a>
                     )}
                   </div>
                 )}
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </article>
+          </AnimatePresence>
+        </div>
+
+        {canStep && (
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] md:px-6 md:py-4">
+            <button
+              type="button"
+              onClick={onPrev}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-hairline bg-card px-4 text-[14px] font-semibold text-onyx shadow-pill transition-transform hover:-translate-x-0.5"
+            >
+              <ArrowLeft size={16} aria-hidden /> Previous
+            </button>
+            <span className="hidden text-[13px] font-medium text-ash md:inline">Use ← → to browse</span>
+            <button
+              type="button"
+              onClick={onNext}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-onyx px-4 text-[14px] font-semibold text-on-onyx shadow-cta transition-transform hover:translate-x-0.5"
+            >
+              Next <ArrowRight size={16} className="text-pop" aria-hidden />
+            </button>
+          </div>
+        )}
+      </motion.div>
     </motion.div>
-  );
-}
-
-/**
- * Projects, grouped by vertical.
- * Supports custom categories registry and single-item expansion interaction.
- */
-export function Projects({
-  items,
-  title,
-  categories,
-}: {
-  items: ProjectItem[];
-  title?: string;
-  categories?: string[];
-}) {
-  const ref = useRef<HTMLElement>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-
-  // Derive categories order: predefined + configured custom + any present in items
-  const baseCategories = categories && categories.length > 0 ? categories : (PROJECT_VERTICALS as readonly string[]);
-  const allCategoryNames = Array.from(new Set([...baseCategories, ...items.map((p) => p.vertical)]));
-
-  // Non-empty verticals in order, with continuous index stagger
-  const groups = allCategoryNames
-    .map((v) => ({
-      vertical: v as ProjectVertical,
-      items: items.filter((p) => p.vertical === v),
-    }))
-    .filter((g) => g.items.length > 0)
-    .reduce<{ vertical: ProjectVertical; items: ProjectItem[]; start: number }[]>((acc, g) => {
-      const prev = acc[acc.length - 1];
-      const start = prev ? prev.start + prev.items.length : 0;
-      return [...acc, { ...g, start }];
-    }, []);
-
-  const toggleSectionExpand = (vertical: string) => {
-    setExpandedSections((prev) => {
-      const isExpanding = !prev[vertical];
-      if (!isExpanding && expandedId) {
-        // If collapsing, check if the currently expanded project card is in the hidden portion (beyond first 3)
-        const group = groups.find((g) => g.vertical === vertical);
-        const isHidden = group?.items.slice(3).some((p) => p.id === expandedId);
-        if (isHidden) {
-          setExpandedId(null);
-        }
-      }
-      return { ...prev, [vertical]: isExpanding };
-    });
-  };
-
-  const { scrollYProgress } = useScroll({
-    target: ref as never,
-    offset: ["start end", "end start"],
-  });
-  // ghost title drifts slower than the cards
-  const ghostY = useTransform(scrollYProgress, [0, 1], [80, -80]);
-  const ghostOpacity = useTransform(scrollYProgress, [0, 0.35, 0.8, 1], [0, 1, 1, 0.4]);
-
-  // Click outside listener: collapse expanded card when clicking outside any project card
-  useEffect(() => {
-    if (!expandedId) return;
-    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && !target.closest("[data-project-card]")) {
-        setExpandedId(null);
-      }
-    };
-    document.addEventListener("click", handleOutsideClick);
-    document.addEventListener("touchend", handleOutsideClick);
-    return () => {
-      document.removeEventListener("click", handleOutsideClick);
-      document.removeEventListener("touchend", handleOutsideClick);
-    };
-  }, [expandedId]);
-
-  const sectionHeading = title?.trim() || "Projects";
-
-  return (
-    <section
-      id="projects"
-      ref={ref}
-      className="relative -mt-px scroll-mt-24 overflow-hidden bg-transparent px-4 pb-16 pt-10 sm:px-6 md:px-10 md:pb-20 md:pt-16"
-    >
-      {/* black stage feathered top and bottom */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,#0a0a0c_10%,#0a0a0c_90%,transparent_100%)]"
-      />
-      <GridLines />
-      <h2 className="sr-only">{sectionHeading}</h2>
-      <motion.span
-        aria-hidden
-        style={{ y: ghostY, opacity: ghostOpacity }}
-        className="ghost-huge pointer-events-none absolute -top-4 left-0 z-[2] text-[27vw] md:text-[15vw]"
-      >
-        {sectionHeading}
-      </motion.span>
-
-      <div className="relative z-[2] mx-auto max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px] pt-[13vw] md:pt-[7.5vw]">
-        {groups.map((g, gi) => {
-          const isSectionExpanded = expandedSections[g.vertical] ?? false;
-          const hasMore = g.items.length > 3;
-          const visibleItems = isSectionExpanded ? g.items : g.items.slice(0, 3);
-          const remainingCount = g.items.length - 3;
-
-          return (
-            <div key={g.vertical} className={gi > 0 ? "mt-14 md:mt-20" : ""}>
-              <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-white/15 pb-4 md:mb-6">
-                <h3 className="text-balance font-heading text-[22px] leading-tight tracking-tight text-white sm:text-[26px] md:text-[34px]">
-                  {g.vertical}
-                  <sup className="ml-2 align-super text-[12px] font-normal text-white/50">
-                    {pad2(gi + 1)}
-                  </sup>
-                </h3>
-                <span className="shrink-0 font-heading text-[13px] tabular-nums text-white/50 md:text-[14px]">
-                  {g.items.length} {g.items.length === 1 ? "project" : "projects"}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 lg:grid-cols-3 md:gap-6">
-                {visibleItems.map((p, i) => (
-                  <ProjectCard
-                    key={p.id}
-                    p={p}
-                    index={g.start + i}
-                    isExpanded={expandedId === p.id}
-                    onToggleExpand={() => setExpandedId((prev) => (prev === p.id ? null : p.id))}
-                  />
-                ))}
-              </div>
-
-              {hasMore && (
-                <div className="mt-8 flex justify-center sm:mt-10">
-                  <button
-                    type="button"
-                    onClick={() => toggleSectionExpand(g.vertical)}
-                    aria-expanded={isSectionExpanded}
-                    aria-label={
-                      isSectionExpanded
-                        ? `Show fewer projects in ${g.vertical}`
-                        : `View ${remainingCount} more projects in ${g.vertical}`
-                    }
-                    className="group relative inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.04] px-5 py-2.5 font-heading text-[13px] font-medium text-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl backdrop-saturate-[1.5] transition-all duration-300 hover:border-white/30 hover:bg-white/[0.08] hover:text-white hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-6 sm:py-3 sm:text-[14px]"
-                  >
-                    {/* Subtle top hairline highlight */}
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                    />
-                    <span>{isSectionExpanded ? "Show less" : "View more"}</span>
-                    {!isSectionExpanded && (
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white/70">
-                        +{remainingCount}
-                      </span>
-                    )}
-                    {isSectionExpanded ? (
-                      <ChevronUp
-                        size={15}
-                        className="text-white/60 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:text-white"
-                        aria-hidden
-                      />
-                    ) : (
-                      <ChevronDown
-                        size={15}
-                        className="text-white/60 transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-white"
-                        aria-hidden
-                      />
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }

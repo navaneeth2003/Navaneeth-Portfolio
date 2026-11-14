@@ -1,31 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import {
+  ArrowUpRight,
   Award,
   BarChart3,
   BookOpen,
   Briefcase,
+  FolderOpen,
   GraduationCap,
-  Link2,
-  Menu,
-  User,
-  FileText,
+  Home,
+  MessageCircle,
+  Sparkles,
   Wrench,
-  X,
   Zap,
 } from "lucide-react";
+import { OwnerAvatar } from "./site/kit";
 
 export type NavLink = { id: string; href: string; label: string };
-export type NavCta = { href: string; label: string; external?: boolean };
 
-const icons: Record<string, typeof User> = {
-  hero: User,
-  projects: Briefcase,
+const icons: Record<string, typeof Home> = {
+  hero: Home,
+  projects: FolderOpen,
   skills: Zap,
-  experience: FileText,
-  contact: Link2,
+  experience: Briefcase,
+  contact: MessageCircle,
   about: BookOpen,
   stats: BarChart3,
   tools: Wrench,
@@ -33,182 +33,200 @@ const icons: Record<string, typeof User> = {
   education: GraduationCap,
 };
 
+/** The nav link whose section the reader is in: the last one whose top has passed 35% of the viewport. */
+function useActiveSection(ids: string[]): string {
+  const key = ids.join("|");
+  const [active, setActive] = useState(ids[0] ?? "hero");
+  useEffect(() => {
+    const list = key.split("|");
+    const update = () => {
+      const line = window.innerHeight * 0.35;
+      let current = list[0];
+      for (const id of list) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= line) current = id;
+      }
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+        current = list[list.length - 1];
+      }
+      setActive(current);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [key]);
+  return active;
+}
+
+/** Phones and tablets tuck the top islands away while scrolling down, and bring them back on the way up. */
+function useHideOnScroll(): boolean {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) < 6) return;
+      setHidden(y > last && y > 160);
+      last = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return hidden;
+}
+
+const ISLAND = "rounded-full border border-hairline bg-card/80 shadow-card backdrop-blur-xl backdrop-saturate-150";
+
 export function Navbar({
   links,
-  brand,
-  cta,
+  name,
+  avatar,
+  resumeUrl,
+  talk = true,
 }: {
   links: NavLink[];
-  brand: string;
-  cta: NavCta | null;
+  name: string;
+  /** The studio's avatar (or photo); missing = the illustrated one. */
+  avatar?: string;
+  resumeUrl?: string | null;
+  /** Whether there is a contact section for "Let's talk" to open. */
+  talk?: boolean;
 }) {
-  const [active, setActive] = useState("hero");
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    const sections = links
-      .map((l) => document.getElementById(l.id))
-      .filter(Boolean) as HTMLElement[];
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) setActive(e.target.id);
-        });
-      },
-      { rootMargin: "-40% 0px -55% 0px" }
-    );
-    sections.forEach((s) => obs.observe(s));
-    return () => obs.disconnect();
-  }, [links]);
-
-  // Intuitive mobile menu: close on Escape, on resize to desktop,
-  // and lock background scroll while open.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    const onResize = () => {
-      if (window.innerWidth >= 768) setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    window.addEventListener("resize", onResize);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", onResize);
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  const ctaRel = cta?.external ? "noreferrer" : undefined;
-  const ctaTarget = cta?.external ? "_blank" : undefined;
+  const first = name.trim().split(/\s+/)[0] || name.trim();
+  const active = useActiveSection(links.map((l) => l.id));
+  const hidden = useHideOnScroll();
 
   return (
     <>
+      {/* ---------- top: three floating islands ---------- */}
       <motion.header
-        initial={{ y: -70, opacity: 0 }}
+        initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-        className="fixed inset-x-0 top-3 z-[80] flex justify-center px-3 md:top-5 lg:top-5 xl:top-6"
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+        className="pointer-events-none fixed inset-x-0 top-0 z-[80] px-3 pt-3 md:px-5 md:pt-4 xl:pt-5"
       >
         <nav
           aria-label="Primary"
-          // Matched to reference screenshot: warm translucent glass,
-          // constant opacity (no scroll darkening), heavy blur + saturation
-          // scaled gracefully on laptop and monitor screens for a fuller presence
-          className="nav-small-laptop-scale flex w-full max-w-[1060px] xl:max-w-[1180px] 2xl:max-w-[1280px] items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-[rgb(22_11_9/0.44)] py-[7px] lg:py-[8px] xl:py-[10px] pl-[7px] lg:pl-[9px] xl:pl-[11px] pr-[7px] lg:pr-[9px] xl:pr-[11px] shadow-[0_12px_40px_-12px_rgba(0,0,0,0.55)] backdrop-blur-[18px] backdrop-saturate-[1.4]"
+          className={`mx-auto flex max-w-[1360px] items-center justify-between gap-3 transition-transform duration-500 lg:translate-y-0 3xl:max-w-[1760px] ${
+            hidden ? "-translate-y-[150%]" : ""
+          }`}
         >
-          <div className="hidden flex-1 items-center justify-center gap-1 lg:gap-2 md:flex">
-            {links.map((l) => {
-              const Icon = icons[l.id] ?? User;
-              const isActive = active === l.id;
-              return (
-                <a
-                  key={l.id}
-                  href={l.href}
-                  aria-current={isActive ? "true" : undefined}
-                  className={`relative flex items-center gap-2 rounded-full px-4 py-[10px] text-[14px] font-medium transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:px-5 lg:py-[10px] lg:text-[15px] xl:px-6 xl:py-[11px] xl:text-[16px] 2xl:text-[17px] ${
-                    isActive
-                      ? "bg-[#e9e1d3] text-[#2a2018]"
-                      : "text-white/[0.88] hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <Icon size={18} strokeWidth={1.9} aria-hidden className="size-[17px] lg:size-[18px] xl:size-[20px]" />
-                  {l.label}
-                </a>
-              );
-            })}
-          </div>
-
-          {/* mobile brand */}
+          {/* brand island */}
           <a
             href="#hero"
-            className="flex min-h-[44px] min-w-0 items-center gap-2 rounded-full px-4 py-2 text-[15px] font-semibold md:hidden"
+            aria-label={name.trim() ? `${name.trim()} — back to top` : "Back to top"}
+            className={`group pointer-events-auto flex h-14 items-center gap-2.5 py-1.5 pl-1.5 md:h-[60px] md:gap-3 3xl:h-[72px] 3xl:pl-2 ${
+              first ? "pr-5 md:pr-6 3xl:pr-7" : "pr-1.5 3xl:pr-2"
+            } ${ISLAND}`}
           >
-            <User size={17} aria-hidden /> <span className="truncate">{brand}</span>
+            <OwnerAvatar src={avatar} className="size-10 md:size-11 3xl:size-[54px]" />
+            {first && (
+              <span className="max-w-[40vw] truncate text-[18px] font-extrabold tracking-[-0.035em] text-onyx md:max-w-none md:text-[19px] 3xl:text-[23px]">
+                {first}
+              </span>
+            )}
           </a>
 
-          <div className="flex items-center gap-2">
-            {cta && (
-              <a
-                href={cta.href}
-                target={ctaTarget}
-                rel={ctaRel}
-                className="hidden whitespace-nowrap rounded-full bg-[#f2eee7] px-5 py-3 text-[14px] font-semibold text-black transition-transform duration-300 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:block lg:px-6 lg:py-3.5 lg:text-[15px] xl:px-7 xl:py-3.5 xl:text-[16px] 2xl:text-[17px]"
-              >
-                {cta.label}
-              </a>
-            )}
-            <button
-              onClick={() => setOpen(!open)}
-              aria-label={open ? "Close menu" : "Open menu"}
-              aria-expanded={open}
-              aria-controls="mobile-menu"
-              className="grid size-11 place-items-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:hidden"
-            >
-              {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
-            </button>
-          </div>
+          {/* links island (laptop and up): an inset track with a sliding pill */}
+          <ul className={`pointer-events-auto hidden items-center gap-1 p-1.5 lg:flex 3xl:p-2 ${ISLAND}`}>
+            {links.map((l) => {
+              const isActive = active === l.id;
+              return (
+                <li key={l.id}>
+                  <a
+                    href={l.href}
+                    title={l.label}
+                    aria-current={isActive ? "true" : undefined}
+                    className={`relative block whitespace-nowrap rounded-full px-4 py-2.5 text-[14.5px] font-semibold transition-colors xl:px-5 3xl:px-6 3xl:py-3 3xl:text-[17px] ${
+                      isActive ? "text-on-onyx" : "text-ash hover:text-onyx"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="nav-pill"
+                        className="absolute inset-0 rounded-full bg-onyx"
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      />
+                    )}
+                    <span className="relative block max-w-[6.5rem] truncate xl:max-w-[8rem] 2xl:max-w-[10rem] 3xl:max-w-[13rem]">{l.label}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* actions island: the resume (when the CMS has one) and "Let's talk" (when there is a contact section) */}
+          {(talk || resumeUrl) && (
+            <div className={`pointer-events-auto flex h-14 items-center gap-1 p-1.5 md:h-[60px] 3xl:h-[72px] 3xl:p-2 ${ISLAND}`}>
+              {resumeUrl && (
+                <a
+                  href={resumeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`h-full items-center gap-1 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold transition-colors 3xl:text-[17px] ${
+                    talk ? "hidden text-ash hover:text-onyx md:inline-flex lg:hidden xl:inline-flex" : "inline-flex bg-onyx text-on-onyx md:px-5"
+                  }`}
+                >
+                  Resume
+                  <ArrowUpRight size={16} strokeWidth={2.3} aria-hidden className={talk ? undefined : "text-pop"} />
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              )}
+              {talk && (
+                <a
+                  href="#contact"
+                  className="inline-flex h-full items-center gap-2 whitespace-nowrap rounded-full bg-onyx px-4 text-[14px] font-semibold text-on-onyx transition-transform duration-300 hover:-translate-y-0.5 md:px-5 md:text-[15px] 3xl:px-7 3xl:text-[17px]"
+                >
+                  <MessageCircle size={17} strokeWidth={2.2} aria-hidden className="text-pop" />
+                  Let&apos;s talk
+                </a>
+              )}
+            </div>
+          )}
         </nav>
       </motion.header>
 
-      <AnimatePresence>
-        {open && (
-          <motion.button
-            key="nav-overlay"
-            aria-hidden
-            tabIndex={-1}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setOpen(false)}
-            className="fixed inset-0 z-[78] cursor-default bg-black/40 backdrop-blur-[6px] md:hidden"
-          />
-        )}
-        {open && (
-          <motion.div
-            key="nav-menu"
-            id="mobile-menu"
-            role="dialog"
-            aria-label="Site navigation"
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className="fixed inset-x-3 top-[68px] sm:inset-x-6 sm:top-[74px] z-[79] max-h-[calc(100svh-88px)] overflow-y-auto rounded-3xl border border-white/[0.12] bg-[rgb(22_11_9/0.52)] p-3.5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] backdrop-blur-[24px] backdrop-saturate-[1.6] ring-1 ring-white/10 md:hidden"
-          >
-            {links.map((l) => {
-              const Icon = icons[l.id] ?? User;
-              return (
+      {/* ---------- bottom tab bar: phones & tablets ---------- */}
+      <motion.nav
+        aria-label="Sections"
+        initial={{ y: 90, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
+        className="fixed inset-x-0 bottom-0 z-[80] flex justify-center px-3 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden"
+      >
+        <ul className="flex w-full max-w-[440px] items-center justify-between gap-0.5 rounded-full border border-hairline bg-card/70 p-1.5 shadow-float backdrop-blur-xl backdrop-saturate-150 md:w-auto md:max-w-full md:gap-1 md:p-2">
+          {links.map((l) => {
+            const Icon = icons[l.id] ?? Sparkles;
+            const isActive = active === l.id;
+            return (
+              <li key={l.id} className={`min-w-0 ${isActive ? "flex-[1.6] md:flex-initial" : "flex-1 md:flex-initial"}`}>
                 <a
-                  key={l.id}
                   href={l.href}
-                  onClick={() => setOpen(false)}
-                  aria-current={active === l.id ? "true" : undefined}
-                  className={`flex min-h-[48px] items-center gap-3 rounded-2xl px-4 py-3 text-[16px] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                    active === l.id
-                      ? "bg-[#e9e1d3] font-medium text-[#2a2018] shadow-sm"
-                      : "text-white/[0.88] hover:bg-white/10 hover:text-white"
+                  aria-current={isActive ? "true" : undefined}
+                  aria-label={l.label}
+                  className={`relative flex h-12 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-[13px] font-semibold transition-colors md:h-[52px] md:px-5 md:text-[15px] ${
+                    isActive ? "text-on-onyx" : "text-ash hover:text-onyx"
                   }`}
                 >
-                  <Icon size={17} aria-hidden /> {l.label}
+                  {isActive && (
+                    <motion.span
+                      layoutId="tab-pill"
+                      className="absolute inset-0 rounded-full bg-onyx shadow-cta"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <Icon size={19} strokeWidth={2.1} aria-hidden className="relative z-10 shrink-0" />
+                  <span className={`relative z-10 truncate md:max-w-[7.5rem] ${isActive ? "" : "max-md:hidden"}`}>{l.label}</span>
                 </a>
-              );
-            })}
-            {cta && (
-              <a
-                href={cta.href}
-                target={ctaTarget}
-                rel={ctaRel}
-                className="mt-2.5 block min-h-[48px] rounded-2xl bg-[#f2eee7] px-4 py-3.5 text-center font-semibold text-black transition-transform duration-200 active:scale-[0.98] shadow-sm"
-              >
-                {cta.label}
-              </a>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+              </li>
+            );
+          })}
+        </ul>
+      </motion.nav>
     </>
   );
 }

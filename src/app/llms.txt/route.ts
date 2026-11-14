@@ -1,5 +1,6 @@
 import { getPublishedSite } from "@/lib/published";
 import { getEffectiveSeo } from "@/lib/seo";
+import { formatRange } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ ${hero.shortBio}
 ## Key Work & Experience
 ${experience
   .map(
-    (exp) => `### ${exp.role} at ${exp.company} (${exp.startDate} – ${exp.endDate})
+    (exp) => `### ${exp.role}${exp.company ? ` at ${exp.company}` : ""}${formatRange(exp.startDate, exp.endDate) ? ` (${formatRange(exp.startDate, exp.endDate)})` : ""}
 ${exp.bullets.map((b) => `- ${b}`).join("\n")}
 ${exp.highlight ? `*Highlight:* ${exp.highlight}` : ""}
 ${exp.tags && exp.tags.length > 0 ? `*Tags:* ${exp.tags.join(", ")}` : ""}`,
