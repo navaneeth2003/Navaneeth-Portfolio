@@ -1,0 +1,21 @@
+/* TEAM */
+Developer & Software Engineer: Amith Abey Stephen
+Site: https://amith.site/
+LinkedIn: https://www.linkedin.com/in/amith-abey-stephen/
+GitHub: https://github.com/Amith-Abey-Stephen/
+Location: Kerala, India
+
+Portfolio Subject & Product Lead: Navaneeth C L
+Role: Associate Product Manager, Ex-Founder, CS Engineer
+Site: https://thenavaneeth.com/
+LinkedIn: https://www.linkedin.com/in/navaneethcl/
+X (Twitter): https://x.com/Navaneethtalks
+Location: Kerala, India
+
+/* SITE */
+Last update: 2026/09/16
+Language: English
+Doctype: HTML5
+Standards: HTML5, CSS3, Schema.org, OpenGraph, JSON-LD, llms.txt
+Framework & Tooling: Next.js 16 (App Router), React 19, TypeScript, TailwindCSS, Supabase, Lucide Icons
+Software Architecture: Single-document headless CMS, real-time preview, immutable version history, Schema graph

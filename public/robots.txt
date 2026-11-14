@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Disallow: /studio
+
+# AI Agents and LLM Crawlers (AEO / GEO)
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: PerplexityBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /studio
+
+Sitemap: https://thenavaneeth.com/sitemap.xml
