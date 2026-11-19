@@ -458,7 +458,7 @@ export function StudioApp({ demo = false }: { demo?: boolean } = {}) {
         {authStep === "email" ? (
           <form onSubmit={handleSendCode}>
             <p className="mt-2 text-sm text-muted">
-              Enter your email and we&apos;ll send you a sign-in link.
+              Enter your email and we&apos;ll send you a 6-digit verification code.
             </p>
             <input
               type="email"
@@ -474,29 +474,31 @@ export function StudioApp({ demo = false }: { demo?: boolean } = {}) {
               disabled={authBusy}
               className="mt-3 w-full rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-50"
             >
-              {authBusy ? "Sending…" : "Email me a sign-in link"}
+              {authBusy ? "Sending code…" : "Send verification code"}
             </button>
           </form>
         ) : (
           <form onSubmit={handleVerifyCode}>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Check {authEmail.trim()} and click the sign-in link — this page signs in by
-              itself. If your email shows a 6-digit code instead, enter it below.
+              Enter the 6-digit verification code sent to{" "}
+              <span className="font-semibold text-ink">{authEmail.trim()}</span>.
             </p>
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
+              autoFocus
+              maxLength={8}
               value={authCode}
               onChange={(e) => setAuthCode(e.target.value)}
               placeholder="123456"
-              className="mt-6 w-full rounded-full border border-line bg-surface px-4 py-3 text-center text-lg tracking-[0.3em] transition-colors duration-200 focus:border-ink focus:outline-none"
+              className="mt-6 w-full rounded-full border border-line bg-surface px-4 py-3 text-center text-lg font-mono tracking-[0.3em] transition-colors duration-200 focus:border-ink focus:outline-none"
             />
             <button
               type="submit"
               disabled={authBusy || authCode.trim().length === 0}
               className="mt-3 w-full rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-50"
             >
-              {authBusy ? "Checking…" : "Sign in with code"}
+              {authBusy ? "Verifying…" : "Sign in with code"}
             </button>
             <button
               type="button"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties, type FormEvent } from "react";
-import { ArrowUpRight, Check, Copy, FileText, Mail, Send } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Check, Copy, FileText, Mail, Send } from "lucide-react";
 import type { ChatterVoice, ContactInfo } from "@/lib/types";
 import { firstName } from "@/lib/format";
 import { LinkedInIcon, ScrollReveal } from "./ui";
@@ -49,14 +49,54 @@ export function Contact({
   const email = contact.email.trim();
   const linkedin = contact.linkedinUrl?.trim() || null;
   const resume = contact.resumeUrl?.trim() || null;
+  const [nameInput, setNameInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
   const [msg, setMsg] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const send = (e: FormEvent) => {
+  const send = async (e: FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(first ? `Hello ${first} 👋` : "Hello 👋");
-    const body = msg.trim() ? `&body=${encodeURIComponent(msg.trim())}` : "";
-    window.location.href = `mailto:${email}?subject=${subject}${body}`;
+    if (!emailInput.trim()) {
+      setStatus("error");
+      setErrorMessage("Please enter your email address so I can get back to you.");
+      return;
+    }
+    if (!msg.trim()) {
+      setStatus("error");
+      setErrorMessage("Please write a message before sending.");
+      return;
+    }
+
+    setStatus("sending");
+    setErrorMessage("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nameInput.trim(),
+          email: emailInput.trim(),
+          message: msg.trim(),
+          honeypot: honeypot.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data?.ok) {
+        setStatus("success");
+      } else {
+        setStatus("error");
+        setErrorMessage(data?.error || "Failed to deliver message. Please try again or email directly.");
+      }
+    } catch {
+      setStatus("error");
+      setErrorMessage("Network error occurred. Please try again or email directly.");
+    }
   };
 
   const copy = async () => {
@@ -195,53 +235,154 @@ export function Contact({
                   })}
                 </div>
 
-                <form onSubmit={send} className="surface relative rounded-[30px] p-4 sm:p-6 md:rounded-[36px] md:p-7 3xl:p-10">
-                  <div className="flex items-center justify-between gap-3 border-b border-hairline pb-4">
-                    <p className="text-[15px] font-bold text-onyx md:text-[16px] 3xl:text-[19px]">New message</p>
-                    <span className="truncate rounded-full bg-well px-3 py-1 text-[13px] font-semibold text-ash 3xl:text-[15px]">
-                      To: {first || "me"}
-                    </span>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2 md:mt-5">
-                    {STARTERS.map((s) => (
-                      <button
-                        key={s.text}
-                        type="button"
-                        onClick={() => setMsg(s.text)}
-                        className="inline-flex items-center gap-2 rounded-full border border-hairline bg-well px-3.5 py-2 text-[13.5px] font-semibold text-onyx/80 transition-transform hover:-translate-y-0.5 hover:text-onyx 3xl:text-[16px]"
-                      >
-                        <span aria-hidden className="text-[15px] leading-none">
-                          {s.emoji}
-                        </span>
-                        {s.text}
-                      </button>
-                    ))}
-                  </div>
-                  <label htmlFor="contact-message" className="sr-only">
-                    Your message{first ? ` to ${first}` : ""}
-                  </label>
-                  <textarea
-                    id="contact-message"
-                    rows={4}
-                    value={msg}
-                    onChange={(e) => setMsg(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(e);
-                    }}
-                    placeholder={first ? `Write ${first} a quick hello…` : "Write a quick hello…"}
-                    className="mt-4 min-h-[132px] w-full resize-none rounded-[20px] border border-hairline bg-well px-4 py-3.5 text-[16px] leading-relaxed text-onyx placeholder:text-dust focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-onyx/60 md:min-h-[150px] 3xl:min-h-[190px] 3xl:text-[19px]"
-                  />
-                  <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-[13px] font-medium text-ash 3xl:text-[15px]">Opens your email app, message ready to go.</p>
+                {status === "success" ? (
+                  <div className="surface relative rounded-[30px] p-6 text-center sm:p-8 md:rounded-[36px] md:p-10 3xl:p-12">
+                    <div className="mx-auto grid size-14 place-items-center rounded-full bg-[#2fb36b]/15 text-[#2fb36b] 3xl:size-16">
+                      <Check size={28} strokeWidth={2.5} />
+                    </div>
+                    <h3 className="mt-4 text-[20px] font-bold text-onyx 3xl:text-[24px]">Message sent!</h3>
+                    <p className="mx-auto mt-2 max-w-[360px] text-[15px] leading-relaxed text-ash 3xl:max-w-[420px] 3xl:text-[17px]">
+                      Thanks for reaching out! Your message was delivered to {first || "Navaneeth"}&apos;s inbox. You&apos;ll receive a reply at{" "}
+                      <span className="font-semibold text-onyx">{emailInput}</span> soon.
+                    </p>
                     <button
-                      type="submit"
-                      className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-onyx px-6 text-[15px] font-semibold text-on-onyx shadow-cta transition-transform hover:-translate-y-0.5 3xl:min-h-[62px] 3xl:px-8 3xl:text-[18px]"
+                      type="button"
+                      onClick={() => {
+                        setStatus("idle");
+                        setMsg("");
+                        setErrorMessage("");
+                      }}
+                      className="mt-6 inline-flex min-h-[46px] items-center justify-center rounded-full border border-hairline bg-well px-6 text-[14px] font-semibold text-onyx transition-transform hover:-translate-y-0.5 3xl:min-h-[52px] 3xl:px-7 3xl:text-[16px]"
                     >
-                      Send
-                      <Send size={16} strokeWidth={2.3} className="text-pop" aria-hidden />
+                      Send another message
                     </button>
                   </div>
-                </form>
+                ) : (
+                  <form onSubmit={send} className="surface relative rounded-[30px] p-4 sm:p-6 md:rounded-[36px] md:p-7 3xl:p-10">
+                    <div className="flex items-center justify-between gap-3 border-b border-hairline pb-4">
+                      <p className="text-[15px] font-bold text-onyx md:text-[16px] 3xl:text-[19px]">New message</p>
+                      <span className="truncate rounded-full bg-well px-3 py-1 text-[13px] font-semibold text-ash 3xl:text-[15px]">
+                        To: {first || "me"}
+                      </span>
+                    </div>
+
+                    {/* Honeypot field for bot suppression */}
+                    <div className="sr-only" aria-hidden="true">
+                      <label htmlFor="contact-website-honeypot">Leave empty</label>
+                      <input
+                        id="contact-website-honeypot"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={honeypot}
+                        onChange={(e) => setHoneypot(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2 md:mt-5">
+                      {STARTERS.map((s) => (
+                        <button
+                          key={s.text}
+                          type="button"
+                          onClick={() => {
+                            setMsg((prev) => (prev ? `${prev}\n${s.text}` : s.text));
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full border border-hairline bg-well px-3.5 py-2 text-[13.5px] font-semibold text-onyx/80 transition-transform hover:-translate-y-0.5 hover:text-onyx 3xl:text-[16px]"
+                        >
+                          <span aria-hidden className="text-[15px] leading-none">
+                            {s.emoji}
+                          </span>
+                          {s.text}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="contact-name" className="sr-only">Your name</label>
+                        <input
+                          id="contact-name"
+                          type="text"
+                          value={nameInput}
+                          onChange={(e) => setNameInput(e.target.value)}
+                          placeholder="Your name"
+                          disabled={status === "sending"}
+                          maxLength={100}
+                          className="w-full rounded-[16px] border border-hairline bg-well px-4 py-3 text-[15px] font-medium text-onyx placeholder:text-dust focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-onyx/60 disabled:opacity-60 3xl:py-3.5 3xl:text-[17px]"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="contact-email" className="sr-only">Your email</label>
+                        <input
+                          id="contact-email"
+                          type="email"
+                          required
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          placeholder="Your email (so I can reply)"
+                          disabled={status === "sending"}
+                          maxLength={120}
+                          className="w-full rounded-[16px] border border-hairline bg-well px-4 py-3 text-[15px] font-medium text-onyx placeholder:text-dust focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-onyx/60 disabled:opacity-60 3xl:py-3.5 3xl:text-[17px]"
+                        />
+                      </div>
+                    </div>
+
+                    <label htmlFor="contact-message" className="sr-only">
+                      Your message{first ? ` to ${first}` : ""}
+                    </label>
+                    <textarea
+                      id="contact-message"
+                      rows={4}
+                      required
+                      value={msg}
+                      onChange={(e) => setMsg(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(e);
+                      }}
+                      disabled={status === "sending"}
+                      placeholder={first ? `Write ${first} a quick hello…` : "Write a quick hello…"}
+                      className="mt-3 min-h-[120px] w-full resize-none rounded-[20px] border border-hairline bg-well px-4 py-3.5 text-[15px] leading-relaxed text-onyx placeholder:text-dust focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-onyx/60 disabled:opacity-60 md:min-h-[140px] 3xl:min-h-[170px] 3xl:text-[18px]"
+                    />
+
+                    {status === "error" && (
+                      <div className="mt-3 flex items-start gap-2.5 rounded-[16px] border border-red-500/25 bg-red-500/10 p-3 text-[13.5px] text-red-700 dark:text-red-300">
+                        <AlertCircle size={17} className="mt-0.5 shrink-0 text-red-500" aria-hidden />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold">{errorMessage || "Failed to send message."}</p>
+                          {email && (
+                            <p className="mt-1 text-[12.5px] opacity-90">
+                              You can also email directly:{" "}
+                              <a href={`mailto:${email}`} className="font-semibold underline underline-offset-2">
+                                {email}
+                              </a>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-[13px] font-medium text-ash 3xl:text-[15px]">Sends directly to {first || "my"} inbox.</p>
+                      <button
+                        type="submit"
+                        disabled={status === "sending"}
+                        className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-full bg-onyx px-6 text-[15px] font-semibold text-on-onyx shadow-cta transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 3xl:min-h-[60px] 3xl:px-8 3xl:text-[18px]"
+                      >
+                        {status === "sending" ? (
+                          <>
+                            <span className="size-4 animate-spin rounded-full border-2 border-on-onyx border-t-transparent" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            Send
+                            <Send size={16} strokeWidth={2.3} className="text-pop" aria-hidden />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           </ScrollReveal>
